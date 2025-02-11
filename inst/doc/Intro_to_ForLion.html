@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Introduction to ForLion package</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Introduction to ForLion package</h1>
+
+
+
+<p><strong>Reference Manuscript</strong>: Huang, Y., Li, K., Mandal, A.
+et al. ForLion: a new algorithm for D-optimal designs under general
+parametric statistical models with mixed factors. Stat Comput 34, 157
+(2024).</p>
+<p>This package implements the Forlion algorithm on the problem of
+designing an experiment with both discrete and continuous factors. The
+ForLion algorithm searches for locally optimal approximate designs under
+the D-criterion. When the true parameters are unknown, we can generate
+the EW D-optimal designs. This features allow users to create efficient
+and robust experimental designs that account for parameter uncertainty.
+The algorithm performs an exhaustive search in a design space with mixed
+factors while keeping high efficiency and reducing the number of
+distinct experimental settings. We mainly focus on generalized linear
+models (GLMs) and multinomial logit models (MLMs). Furthermore,
+implementing approximate designs with continuous settings can be
+challenging in practical applications. To address this issue, our
+package includes an algorithm that converts approximate designs into
+exact designs. This approximate-to-exact design algorithm ensures that
+the resulting exact design remains highly efficient while being more
+feasible for practical implementation.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(ForLion)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">library</span>(psych)</span></code></pre></div>
+<div id="glm-example" class="section level3">
+<h3>GLM Example</h3>
+<p>This is an example of electrostatic discharge (ESD) experiment in
+Section 4 of the reference manuscript.</p>
+<p>Lukemire et al. (2019) reconsidered the electrostatic discharge (ESD)
+experiment described by Whitman et al. (2006) with a binary response and
+five mixed factors. The first four factors LotA, LotB, ESD, Pulse take
+values in <span class="math inline">\(\{-1,1\}\)</span>, and the fifth
+factor Voltage <span class="math inline">\(\in [25, 45]\)</span> is
+continuous.</p>
+<p>The logistic regression model is:</p>
+<p><span class="math inline">\(\text{logit}(\mu)=\beta_0+\beta_1\text{LotA}+\beta_2\text{LotB}+\beta_3\text{ESD}+\beta_4\text{Pulse}+\beta_5\text{Voltage}+\beta_{34}(\text{ESD}\times\text{Pulse})\)</span></p>
+<p>The parameter values: <span class="math inline">\(\boldsymbol \beta =
+(\beta_0, \beta_1, \beta_2, \beta_3, \beta_4, \beta_5,
+\beta_{34})=(-7.5, 1.50,-0.2,-0.15,0.25,0.35,0.4)\)</span></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>hfunc.temp <span class="ot">=</span> <span class="cf">function</span>(y) {<span class="fu">c</span>(y,y[<span class="dv">4</span>]<span class="sc">*</span>y[<span class="dv">5</span>],<span class="dv">1</span>);};   <span class="co"># y -&gt; h(y)=(y1,y2,y3,y4,y5,y4*y5,1)</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>n.factor.temp <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>)  <span class="co"># 1 continuous factor with 4 discrete factors</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>factor.level.temp <span class="ot">=</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="dv">25</span>,<span class="dv">45</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>,<span class="dv">1</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>,<span class="dv">1</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>,<span class="dv">1</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>,<span class="dv">1</span>)) </span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>link.temp<span class="ot">=</span><span class="st">&quot;logit&quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>beta.value <span class="ot">=</span> <span class="fu">c</span>(<span class="fl">0.35</span>,<span class="fl">1.50</span>,<span class="sc">-</span><span class="fl">0.2</span>,<span class="sc">-</span><span class="fl">0.15</span>,<span class="fl">0.25</span>,<span class="fl">0.4</span>,<span class="sc">-</span><span class="fl">7.5</span>)       <span class="co"># continuous first and intercept last to fit hfunc.temp</span></span></code></pre></div>
+<p>Then, we use the <em>ForLion_GLM_Optimal()</em> function in ForLion
+package to search for the D-optimal design</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">ForLion_GLM_Optimal</span>(<span class="at">n.factor=</span>n.factor.temp, <span class="at">factor.level=</span>factor.level.temp, <span class="at">hfunc=</span>hfunc.temp,<span class="at">bvec=</span>beta.value,<span class="at">link=</span>link.temp,<span class="at">reltol=</span><span class="fl">1e-8</span>, <span class="at">rel.diff=</span><span class="fl">0.03</span>, <span class="at">maxit=</span><span class="dv">500</span>, <span class="at">random=</span><span class="cn">FALSE</span>, <span class="at">logscale=</span><span class="cn">TRUE</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; Design Output</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; =============================================================== </span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; Count   Design Point(s)                          Allocation</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt; --------------------------------------------------------------- </span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt; 1       25.0000, -1.0000, -1.0000, -1.0000, -1.0000  0.0868</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt; 2       25.0000, -1.0000, -1.0000, -1.0000,  1.0000  0.0460</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; 3       25.0000, -1.0000, -1.0000,  1.0000, -1.0000  0.1114</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; 4       25.0000, -1.0000, -1.0000,  1.0000,  1.0000  0.0856</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; 5       25.0000, -1.0000,  1.0000, -1.0000, -1.0000  0.0833</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; 6       25.0000, -1.0000,  1.0000, -1.0000,  1.0000  0.1005</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; 7       25.0000, -1.0000,  1.0000,  1.0000, -1.0000  0.0373</span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt; 8       25.0000, -1.0000,  1.0000,  1.0000,  1.0000  0.0923</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; 9       25.0000,  1.0000, -1.0000,  1.0000, -1.0000  0.0140</span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt; 10      25.0000,  1.0000,  1.0000,  1.0000, -1.0000  0.1328</span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt; 11      29.4156, -1.0000, -1.0000, -1.0000,  1.0000  0.0682</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; 12      29.0032, -1.0000,  1.0000, -1.0000, -1.0000  0.0128</span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; 13      32.7255, -1.0000,  1.0000,  1.0000, -1.0000  0.0484</span></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="co">#&gt; 14      32.6908, -1.0000,  1.0000,  1.0000, -1.0000  0.0763</span></span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt; 15      31.4224, -1.0000, -1.0000,  1.0000, -1.0000  0.0042</span></span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt; =============================================================== </span></span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt; m:</span></span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt; [1] 15</span></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt; det:</span></span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="co">#&gt; [1] 1.264497e-05</span></span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="co">#&gt; convergence:</span></span>
+<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a><span class="co">#&gt; min.diff:</span></span>
+<span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a><span class="co">#&gt; [1] 0.0347</span></span>
+<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a><span class="co">#&gt; x.close:</span></span>
+<span id="cb3-36"><a href="#cb3-36" tabindex="-1"></a><span class="co">#&gt;         [,1] [,2] [,3] [,4] [,5]</span></span>
+<span id="cb3-37"><a href="#cb3-37" tabindex="-1"></a><span class="co">#&gt; [1,] 32.7255   -1    1    1   -1</span></span>
+<span id="cb3-38"><a href="#cb3-38" tabindex="-1"></a><span class="co">#&gt; [2,] 32.6908   -1    1    1   -1</span></span>
+<span id="cb3-39"><a href="#cb3-39" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-40"><a href="#cb3-40" tabindex="-1"></a><span class="co">#&gt; itmax:</span></span>
+<span id="cb3-41"><a href="#cb3-41" tabindex="-1"></a><span class="co">#&gt; [1] 500</span></span></code></pre></div>
+</div>
+<div id="mlm-example" class="section level3">
+<h3>MLM Example</h3>
+<p>This is an example of minimizing surface defects experiment, which is
+example in S.3 in the supplementary material of the reference
+manuscript.</p>
+<p>A polysilicon deposition process for manufacturing very large-scale
+integrated (VLSI) circuits was described with six control factors,
+namely, Cleaning Method, Deposition temperature (<span class="math inline">\(^\circ\)</span>C), Deposition pressure (mtorr),
+Nitrogen flow rate (seem), Silane flow rate (seem), and Settling time
+(minutes). Wu (2008) used the relevant experiment as an illustrative
+example and categorized the response Surface Defects from a count number
+to one of the five ordered categories, namely, Practically no surface
+defects (I, <span class="math inline">\(0\sim 3\)</span>), Very few
+defects (II, <span class="math inline">\(4\sim 30\)</span>), Some
+defects (III, <span class="math inline">\(31\sim 300\)</span>), Many
+defects (IV, <span class="math inline">\(301\sim 1000\)</span>), and Too
+many defects (V, <span class="math inline">\(1001\)</span> and
+above).</p>
+<p>The example uses cumulative proportional odds model.</p>
+<p><span class="math inline">\(\log\left(\frac{\pi_{i1}+\cdots+\pi_{ij}}{\pi_{i,j+1}+\cdots+\pi_{iJ}}\right)=\theta_{j}
+- \beta_1 x_{i1} - \beta_2 x_{i2} - \beta_3 x_{i3}\nonumber - \beta_4
+x_{i4} - \beta_5 x_{i5} - \beta_6 x_{i6}\)</span></p>
+<p>with <span class="math inline">\(i=1, \ldots, m\)</span> and <span class="math inline">\(j=1, 2, 3, 4\)</span> and <span class="math inline">\(\boldsymbol \theta = (\theta_1, \theta_2,
+\theta_3, \theta_4, \beta_1, \beta_2, \beta_3, \beta_4, \beta_5,
+\beta_6)=(-1.77994301, -0.05287782,  1.86852211, 2.76330779,\)</span> $
+-0.94437464, 0.18504420, -0.01638597, -0.03543202, -0.07060306,
+0.10347917)$.</p>
+<p><strong>Note: Always put continuous factors ahead of discrete
+factors, pay attention to the order of coefficients pairing with
+predictors</strong></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>link.temp <span class="ot">=</span> <span class="st">&quot;cumulative&quot;</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="do">## Note: Always put continuous factors ahead of discrete factors, pay attention to the order of coefficients paring with predictors</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>n.factor.temp <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">2</span>)  <span class="co"># 1 discrete factor w/ 2 levels + 5 continuous</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>factor.level.temp <span class="ot">=</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="sc">-</span><span class="dv">25</span>,<span class="dv">25</span>), <span class="fu">c</span>(<span class="sc">-</span><span class="dv">200</span>,<span class="dv">200</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">150</span>,<span class="dv">0</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">100</span>,<span class="dv">0</span>),<span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">16</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>,<span class="dv">1</span>))</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>J <span class="ot">=</span> <span class="dv">5</span> <span class="co">#num of response levels</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>p <span class="ot">=</span> <span class="dv">10</span> <span class="co">#num of parameters</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>hfunc.temp <span class="ot">=</span> <span class="cf">function</span>(y){</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="cf">if</span>(<span class="fu">length</span>(y) <span class="sc">!=</span> <span class="dv">6</span>){<span class="fu">stop</span>(<span class="st">&quot;Input should have length 6&quot;</span>);}</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  model.mat <span class="ot">=</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, <span class="at">nrow=</span><span class="dv">5</span>, <span class="at">ncol=</span><span class="dv">10</span>, <span class="at">byrow=</span><span class="cn">TRUE</span>)</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>  model.mat[<span class="dv">5</span>,]<span class="ot">=</span><span class="dv">0</span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  model.mat[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>,<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>] <span class="ot">=</span> <span class="fu">diag</span>(<span class="dv">4</span>)</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>  model.mat[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="dv">5</span>] <span class="ot">=</span>((<span class="sc">-</span><span class="dv">1</span>)<span class="sc">*</span>y[<span class="dv">6</span>])</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>  model.mat[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="dv">6</span><span class="sc">:</span><span class="dv">10</span>] <span class="ot">=</span> <span class="fu">matrix</span>(((<span class="sc">-</span><span class="dv">1</span>)<span class="sc">*</span>y[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>]), <span class="at">nrow=</span><span class="dv">4</span>, <span class="at">ncol=</span><span class="dv">5</span>, <span class="at">byrow=</span><span class="cn">TRUE</span>)</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>  <span class="fu">return</span>(model.mat)</span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>}</span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>hprime.temp<span class="ot">=</span><span class="cn">NULL</span> <span class="co">#use numerical gradient for optim, thus could be NULL, if use analytical gradient then define hprime function</span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a>b.temp <span class="ot">=</span> <span class="fu">c</span>(<span class="sc">-</span><span class="fl">1.77994301</span>, <span class="sc">-</span><span class="fl">0.05287782</span>,  <span class="fl">1.86852211</span>, <span class="fl">2.76330779</span>, <span class="sc">-</span><span class="fl">0.94437464</span>, <span class="fl">0.18504420</span>,  <span class="sc">-</span><span class="fl">0.01638597</span>, <span class="sc">-</span><span class="fl">0.03543202</span>, <span class="sc">-</span><span class="fl">0.07060306</span>, <span class="fl">0.10347917</span>)</span></code></pre></div>
+<p>Then, we can use <em>ForLion_MLM_Optimal()</em> function in ForLion
+package to search for the D-optimal design</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">ForLion_MLM_Optimal</span>(<span class="at">J=</span>J, <span class="at">n.factor=</span>n.factor.temp, <span class="at">factor.level=</span>factor.level.temp, <span class="at">hfunc=</span>hfunc.temp, <span class="at">h.prime=</span>hprime.temp, <span class="at">bvec=</span>b.temp, <span class="at">link=</span>link.temp, <span class="at">Fi.func=</span>Fi_MLM_func, <span class="at">delta=</span><span class="fl">1e-2</span>, <span class="at">epsilon=</span><span class="fl">1e-12</span>, <span class="at">reltol=</span><span class="fl">1e-10</span>, <span class="at">rel.diff=</span><span class="fl">5e-4</span>, <span class="at">maxit=</span><span class="dv">500</span>, <span class="at">optim_grad=</span><span class="cn">FALSE</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; Design Output</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt; ============================================================================== </span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; Count   Design Point(s)                                         Allocation</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt; ------------------------------------------------------------------------------ </span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; 1       -25.0000, -200.0000,    0.0000,  -18.1815, 16.0000, -1.0000  0.1237</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; 2       -25.0000,  200.0000, -150.0000,  -59.9634, 16.0000,  1.0000  0.0689</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt; 3       -25.0000, -200.0000,    0.0000,  -14.8567,  0.0000,  1.0000  0.1132</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt; 4       -22.7757,  200.0000, -150.0000,    0.0000,  0.0000, -1.0000  0.1208</span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt; 5       -25.0000,  200.0000,    0.0000,  -86.0167, 16.0000,  1.0000  0.0915</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt; 6       -25.0000,  -51.3720,    0.0000, -100.0000,  0.0000,  1.0000  0.0269</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; 7        24.7015,  200.0000,    0.0000,    0.0000,  0.0000, -1.0000  0.0899</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; 8        -4.3339,  200.0000,    0.0000, -100.0000,  0.0000,  1.0000  0.0378</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; 9       -25.0000,  200.0000, -150.0000,  -87.1986,  0.0000,  1.0000  0.0423</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; 10      -25.0000,  200.0000,    0.0000, -100.0000,  0.0000, -1.0000  0.0681</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt; 11      -25.0000,   70.6646,    0.0000, -100.0000,  0.0000, -1.0000  0.0228</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt; 12      -25.0000,   69.9565,    0.0000, -100.0000,  0.0000, -1.0000  0.0025</span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt; 13      -25.0000, -166.2424, -150.0000,    0.0000,  0.0000,  1.0000  0.0385</span></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt; 14      -25.0000,   70.2402,    0.0000, -100.0000,  0.0000, -1.0000  0.0014</span></span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">#&gt; 15      -25.0000, -166.4595, -150.0000,    0.0000,  0.0000,  1.0000  0.0058</span></span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="co">#&gt; 16      -25.0000,   70.1238,    0.0000, -100.0000,  0.0000, -1.0000  0.0018</span></span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">#&gt; 17      -25.0000, -166.6505, -150.0000,    0.0000,  0.0000,  1.0000  0.0057</span></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="co">#&gt; 18      -25.0000,   70.0653,    0.0000, -100.0000,  0.0000, -1.0000  0.0017</span></span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">#&gt; 19      -25.0000, -166.8095, -150.0000,    0.0000,  0.0000,  1.0000  0.0033</span></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="co">#&gt; 20      -25.0000, -166.8887, -150.0000,    0.0000,  0.0000,  1.0000  0.0017</span></span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a><span class="co">#&gt; 21      -25.0000, -166.8881, -150.0000,    0.0000,  0.0000,  1.0000  0.0016</span></span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a><span class="co">#&gt; 22      -25.0000, -166.8871, -150.0000,    0.0000, -0.0000,  1.0000  0.0015</span></span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a><span class="co">#&gt; 23      -25.0000, -166.8851, -150.0000,    0.0000,  0.0000,  1.0000  0.0015</span></span>
+<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a><span class="co">#&gt; 24      -25.0000, -166.8832, -150.0000,    0.0000,  0.0000,  1.0000  0.0014</span></span>
+<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a><span class="co">#&gt; 25      -25.0000, -166.8825, -150.0000,    0.0000,  0.0000,  1.0000  0.0013</span></span>
+<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a><span class="co">#&gt; 26      -25.0000, -166.8790, -150.0000,    0.0000,  0.0000,  1.0000  0.0012</span></span>
+<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a><span class="co">#&gt; 27      -25.0000, -166.8785, -150.0000,    0.0000,  0.0000,  1.0000  0.0012</span></span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a><span class="co">#&gt; 28      -25.0000, -166.8744, -150.0000,    0.0000,  0.0000,  1.0000  0.0012</span></span>
+<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a><span class="co">#&gt; 29      -25.0000, -166.8703, -150.0000,    0.0000,  0.0000,  1.0000  0.0011</span></span>
+<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a><span class="co">#&gt; 30      -25.0000, -166.8639, -150.0000,    0.0000,  0.0000,  1.0000  0.0011</span></span>
+<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a><span class="co">#&gt; 31      -25.0000, -166.8630, -150.0000,    0.0000,  0.0000,  1.0000  0.0010</span></span>
+<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a><span class="co">#&gt; 32      -25.0000,   70.0295,    0.0000, -100.0000,  0.0000, -1.0000  0.0009</span></span>
+<span id="cb5-38"><a href="#cb5-38" tabindex="-1"></a><span class="co">#&gt; 33      -25.0000, -166.8529, -150.0000,    0.0000,  0.0000,  1.0000  0.0009</span></span>
+<span id="cb5-39"><a href="#cb5-39" tabindex="-1"></a><span class="co">#&gt; 34      -25.0000, -166.8493, -150.0000,    0.0000,  0.0000,  1.0000  0.0009</span></span>
+<span id="cb5-40"><a href="#cb5-40" tabindex="-1"></a><span class="co">#&gt; 35      -25.0000, -166.8434, -150.0000,    0.0000,  0.0000,  1.0000  0.0008</span></span>
+<span id="cb5-41"><a href="#cb5-41" tabindex="-1"></a><span class="co">#&gt; 36      -25.0000,   70.0376,    0.0000, -100.0000,  0.0000, -1.0000  0.0007</span></span>
+<span id="cb5-42"><a href="#cb5-42" tabindex="-1"></a><span class="co">#&gt; 37      -25.0000, -166.8382, -150.0000,    0.0000,  0.0000,  1.0000  0.0008</span></span>
+<span id="cb5-43"><a href="#cb5-43" tabindex="-1"></a><span class="co">#&gt; 38      -25.0000, -166.8270, -150.0000,    0.0000,  0.0000,  1.0000  0.0007</span></span>
+<span id="cb5-44"><a href="#cb5-44" tabindex="-1"></a><span class="co">#&gt; 39      -25.0000, -166.8218, -150.0000,    0.0000,  0.0000,  1.0000  0.0006</span></span>
+<span id="cb5-45"><a href="#cb5-45" tabindex="-1"></a><span class="co">#&gt; 40      -25.0000, -166.8083, -150.0000,    0.0000,  0.0000,  1.0000  0.0005</span></span>
+<span id="cb5-46"><a href="#cb5-46" tabindex="-1"></a><span class="co">#&gt; 41      -25.0000,   70.0543,    0.0000, -100.0000,  0.0000, -1.0000  0.0003</span></span>
+<span id="cb5-47"><a href="#cb5-47" tabindex="-1"></a><span class="co">#&gt; 42      -25.0000, -166.8046, -150.0000,    0.0000,  0.0000,  1.0000  0.0004</span></span>
+<span id="cb5-48"><a href="#cb5-48" tabindex="-1"></a><span class="co">#&gt; 43      -25.0000, -166.7956, -150.0000,    0.0000,  0.0000,  1.0000  0.0004</span></span>
+<span id="cb5-49"><a href="#cb5-49" tabindex="-1"></a><span class="co">#&gt; 44      -25.0000,   70.0608,    0.0000, -100.0000, -0.0000, -1.0000  0.0002</span></span>
+<span id="cb5-50"><a href="#cb5-50" tabindex="-1"></a><span class="co">#&gt; 45      -25.0000,   70.0615,    0.0000, -100.0000,  0.0000, -1.0000  0.0002</span></span>
+<span id="cb5-51"><a href="#cb5-51" tabindex="-1"></a><span class="co">#&gt; 46      -25.0000, -166.7908, -150.0000,    0.0000,  0.0000,  1.0000  0.0003</span></span>
+<span id="cb5-52"><a href="#cb5-52" tabindex="-1"></a><span class="co">#&gt; 47      -25.0000,   70.0624,    0.0000, -100.0000, -0.0000, -1.0000  0.0002</span></span>
+<span id="cb5-53"><a href="#cb5-53" tabindex="-1"></a><span class="co">#&gt; 48      -25.0000, -166.7871, -150.0000,    0.0000,  0.0000,  1.0000  0.0003</span></span>
+<span id="cb5-54"><a href="#cb5-54" tabindex="-1"></a><span class="co">#&gt; 49      -25.0000,   70.0637,    0.0000, -100.0000, -0.0000, -1.0000  0.0002</span></span>
+<span id="cb5-55"><a href="#cb5-55" tabindex="-1"></a><span class="co">#&gt; 50      -25.0000,   70.0642,    0.0000, -100.0000, -0.0000, -1.0000  0.0002</span></span>
+<span id="cb5-56"><a href="#cb5-56" tabindex="-1"></a><span class="co">#&gt; 51      -25.0000,   70.0648,    0.0000, -100.0000,  0.0000, -1.0000  0.0002</span></span>
+<span id="cb5-57"><a href="#cb5-57" tabindex="-1"></a><span class="co">#&gt; 52      -25.0000, -166.7840, -150.0000,    0.0000,  0.0000,  1.0000  0.0003</span></span>
+<span id="cb5-58"><a href="#cb5-58" tabindex="-1"></a><span class="co">#&gt; 53      -25.0000, -166.7816, -150.0000,    0.0000,  0.0000,  1.0000  0.0002</span></span>
+<span id="cb5-59"><a href="#cb5-59" tabindex="-1"></a><span class="co">#&gt; 54      -25.0000,   70.0661,    0.0000, -100.0000,  0.0000, -1.0000  0.0001</span></span>
+<span id="cb5-60"><a href="#cb5-60" tabindex="-1"></a><span class="co">#&gt; 55      -25.0000, -166.7794, -150.0000,    0.0000,  0.0000,  1.0000  0.0002</span></span>
+<span id="cb5-61"><a href="#cb5-61" tabindex="-1"></a><span class="co">#&gt; 56      -25.0000,   70.0678,    0.0000, -100.0000,  0.0000, -1.0000  0.0001</span></span>
+<span id="cb5-62"><a href="#cb5-62" tabindex="-1"></a><span class="co">#&gt; 57      -25.0000, -166.7789, -150.0000,    0.0000,  0.0000,  1.0000  0.0002</span></span>
+<span id="cb5-63"><a href="#cb5-63" tabindex="-1"></a><span class="co">#&gt; 58      -25.0000, -166.7783, -150.0000,    0.0000,  0.0000,  1.0000  0.0002</span></span>
+<span id="cb5-64"><a href="#cb5-64" tabindex="-1"></a><span class="co">#&gt; 59      -25.0000,   70.0686,    0.0000, -100.0000,  0.0000, -1.0000  0.0001</span></span>
+<span id="cb5-65"><a href="#cb5-65" tabindex="-1"></a><span class="co">#&gt; 60      -25.0000, -166.7765, -150.0000,    0.0000,  0.0000,  1.0000  0.0002</span></span>
+<span id="cb5-66"><a href="#cb5-66" tabindex="-1"></a><span class="co">#&gt; 61      -25.0000, -166.7759, -150.0000,    0.0000,  0.0000,  1.0000  0.0002</span></span>
+<span id="cb5-67"><a href="#cb5-67" tabindex="-1"></a><span class="co">#&gt; 62      -25.0000,   70.0694,    0.0000, -100.0000,  0.0000, -1.0000  0.0001</span></span>
+<span id="cb5-68"><a href="#cb5-68" tabindex="-1"></a><span class="co">#&gt; 63      -25.0000, -166.7750, -150.0000,    0.0000,  0.0000,  1.0000  0.0002</span></span>
+<span id="cb5-69"><a href="#cb5-69" tabindex="-1"></a><span class="co">#&gt; 64      -25.0000,   70.0705,    0.0000, -100.0000,  0.0000, -1.0000  0.0001</span></span>
+<span id="cb5-70"><a href="#cb5-70" tabindex="-1"></a><span class="co">#&gt; 65      -25.0000,   70.0717,    0.0000, -100.0000,  0.0000, -1.0000  0.0001</span></span>
+<span id="cb5-71"><a href="#cb5-71" tabindex="-1"></a><span class="co">#&gt; 66      -25.0000, -166.7705, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
+<span id="cb5-72"><a href="#cb5-72" tabindex="-1"></a><span class="co">#&gt; 67      -25.0000, -166.7691, -150.0000,    0.0000,  0.0000,  1.0000  0.0002</span></span>
+<span id="cb5-73"><a href="#cb5-73" tabindex="-1"></a><span class="co">#&gt; 68      -25.0000,   70.0730,    0.0000, -100.0000, -0.0000, -1.0000  0.0001</span></span>
+<span id="cb5-74"><a href="#cb5-74" tabindex="-1"></a><span class="co">#&gt; 69      -25.0000, -166.7664, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
+<span id="cb5-75"><a href="#cb5-75" tabindex="-1"></a><span class="co">#&gt; 70      -25.0000, -166.7648, -150.0000,    0.0000, -0.0000,  1.0000  0.0001</span></span>
+<span id="cb5-76"><a href="#cb5-76" tabindex="-1"></a><span class="co">#&gt; 71      -25.0000,   70.0753,    0.0000, -100.0000, -0.0000, -1.0000  0.0001</span></span>
+<span id="cb5-77"><a href="#cb5-77" tabindex="-1"></a><span class="co">#&gt; 72      -25.0000, -166.7629, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
+<span id="cb5-78"><a href="#cb5-78" tabindex="-1"></a><span class="co">#&gt; 73      -25.0000,   70.0763,    0.0000, -100.0000,  0.0000, -1.0000  0.0001</span></span>
+<span id="cb5-79"><a href="#cb5-79" tabindex="-1"></a><span class="co">#&gt; 74      -25.0000, -166.7618, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
+<span id="cb5-80"><a href="#cb5-80" tabindex="-1"></a><span class="co">#&gt; 75      -25.0000, -166.7606, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
+<span id="cb5-81"><a href="#cb5-81" tabindex="-1"></a><span class="co">#&gt; 76      -25.0000,   70.0776,    0.0000, -100.0000,  0.0000, -1.0000  0.0001</span></span>
+<span id="cb5-82"><a href="#cb5-82" tabindex="-1"></a><span class="co">#&gt; 77      -25.0000, -166.7594, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
+<span id="cb5-83"><a href="#cb5-83" tabindex="-1"></a><span class="co">#&gt; 78      -25.0000, -166.7581, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
+<span id="cb5-84"><a href="#cb5-84" tabindex="-1"></a><span class="co">#&gt; 79      -25.0000, -166.7574, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
+<span id="cb5-85"><a href="#cb5-85" tabindex="-1"></a><span class="co">#&gt; 80      -25.0000, -166.7561, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
+<span id="cb5-86"><a href="#cb5-86" tabindex="-1"></a><span class="co">#&gt; 81      -25.0000, -166.7556, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
+<span id="cb5-87"><a href="#cb5-87" tabindex="-1"></a><span class="co">#&gt; 82      -25.0000,   70.0810,    0.0000, -100.0000, -0.0000, -1.0000  0.0000</span></span>
+<span id="cb5-88"><a href="#cb5-88" tabindex="-1"></a><span class="co">#&gt; 83      -25.0000, -166.7543, -150.0000,    0.0000, -0.0000,  1.0000  0.0001</span></span>
+<span id="cb5-89"><a href="#cb5-89" tabindex="-1"></a><span class="co">#&gt; 84      -25.0000, -166.7534, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
+<span id="cb5-90"><a href="#cb5-90" tabindex="-1"></a><span class="co">#&gt; 85      -25.0000, -166.7527, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
+<span id="cb5-91"><a href="#cb5-91" tabindex="-1"></a><span class="co">#&gt; 86      -25.0000,   70.0825,    0.0000, -100.0000,  0.0000, -1.0000  0.0000</span></span>
+<span id="cb5-92"><a href="#cb5-92" tabindex="-1"></a><span class="co">#&gt; 87      -25.0000, -166.7512, -150.0000,    0.0000,  0.0000,  1.0000  0.0000</span></span>
+<span id="cb5-93"><a href="#cb5-93" tabindex="-1"></a><span class="co">#&gt; 88      -25.0000, -166.7505, -150.0000,    0.0000,  0.0000,  1.0000  0.0000</span></span>
+<span id="cb5-94"><a href="#cb5-94" tabindex="-1"></a><span class="co">#&gt; 89      -25.0000, -166.7499, -150.0000,    0.0000,  0.0000,  1.0000  0.0000</span></span>
+<span id="cb5-95"><a href="#cb5-95" tabindex="-1"></a><span class="co">#&gt; 90      -25.0000,   70.0830,    0.0000, -100.0000, -0.0000, -1.0000  0.0000</span></span>
+<span id="cb5-96"><a href="#cb5-96" tabindex="-1"></a><span class="co">#&gt; 91      -25.0000,   70.0838,    0.0000, -100.0000,  0.0000, -1.0000  0.0000</span></span>
+<span id="cb5-97"><a href="#cb5-97" tabindex="-1"></a><span class="co">#&gt; 92      -25.0000, -166.7478, -150.0000,    0.0000, -0.0000,  1.0000  0.0000</span></span>
+<span id="cb5-98"><a href="#cb5-98" tabindex="-1"></a><span class="co">#&gt; 93      -25.0000,   70.0847,    0.0000, -100.0000,  0.0000, -1.0000  0.0000</span></span>
+<span id="cb5-99"><a href="#cb5-99" tabindex="-1"></a><span class="co">#&gt; 94      -25.0000, -166.7460, -150.0000,    0.0000,  0.0000,  1.0000  0.0000</span></span>
+<span id="cb5-100"><a href="#cb5-100" tabindex="-1"></a><span class="co">#&gt; 95      -25.0000,   70.0853,    0.0000, -100.0000,  0.0000, -1.0000  0.0000</span></span>
+<span id="cb5-101"><a href="#cb5-101" tabindex="-1"></a><span class="co">#&gt; 96      -25.0000, -166.7448, -150.0000,    0.0000,  0.0000,  1.0000  0.0000</span></span>
+<span id="cb5-102"><a href="#cb5-102" tabindex="-1"></a><span class="co">#&gt; 97      -25.0000, -166.7441, -150.0000,    0.0000,  0.0000,  1.0000  0.0000</span></span>
+<span id="cb5-103"><a href="#cb5-103" tabindex="-1"></a><span class="co">#&gt; 98      -25.0000,   70.0871,    0.0000, -100.0000, -0.0000, -1.0000  0.0000</span></span>
+<span id="cb5-104"><a href="#cb5-104" tabindex="-1"></a><span class="co">#&gt; 99       25.0000,  200.0000,    0.0000,    0.0000, 16.0000,  1.0000  0.1031</span></span>
+<span id="cb5-105"><a href="#cb5-105" tabindex="-1"></a><span class="co">#&gt; 100     -25.0000, -166.7424, -150.0000,    0.0000,  0.0000,  1.0000  0.0000</span></span>
+<span id="cb5-106"><a href="#cb5-106" tabindex="-1"></a><span class="co">#&gt; ============================================================================== </span></span>
+<span id="cb5-107"><a href="#cb5-107" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-108"><a href="#cb5-108" tabindex="-1"></a><span class="co">#&gt; m:</span></span>
+<span id="cb5-109"><a href="#cb5-109" tabindex="-1"></a><span class="co">#&gt; [1] 100</span></span>
+<span id="cb5-110"><a href="#cb5-110" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-111"><a href="#cb5-111" tabindex="-1"></a><span class="co">#&gt; det:</span></span>
+<span id="cb5-112"><a href="#cb5-112" tabindex="-1"></a><span class="co">#&gt; [1] 219352835</span></span>
+<span id="cb5-113"><a href="#cb5-113" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-114"><a href="#cb5-114" tabindex="-1"></a><span class="co">#&gt; convergence:</span></span>
+<span id="cb5-115"><a href="#cb5-115" tabindex="-1"></a><span class="co">#&gt; [1] FALSE</span></span>
+<span id="cb5-116"><a href="#cb5-116" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-117"><a href="#cb5-117" tabindex="-1"></a><span class="co">#&gt; min.diff:</span></span>
+<span id="cb5-118"><a href="#cb5-118" tabindex="-1"></a><span class="co">#&gt; [1] 5e-04</span></span>
+<span id="cb5-119"><a href="#cb5-119" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-120"><a href="#cb5-120" tabindex="-1"></a><span class="co">#&gt; x.close:</span></span>
+<span id="cb5-121"><a href="#cb5-121" tabindex="-1"></a><span class="co">#&gt;      [,1]      [,2] [,3] [,4] [,5] [,6]</span></span>
+<span id="cb5-122"><a href="#cb5-122" tabindex="-1"></a><span class="co">#&gt; [1,]  -25 -166.8790 -150    0    0    1</span></span>
+<span id="cb5-123"><a href="#cb5-123" tabindex="-1"></a><span class="co">#&gt; [2,]  -25 -166.8785 -150    0    0    1</span></span>
+<span id="cb5-124"><a href="#cb5-124" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-125"><a href="#cb5-125" tabindex="-1"></a><span class="co">#&gt; itmax:</span></span>
+<span id="cb5-126"><a href="#cb5-126" tabindex="-1"></a><span class="co">#&gt; [1] 500</span></span></code></pre></div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

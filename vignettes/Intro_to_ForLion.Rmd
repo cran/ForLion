@@ -1,0 +1,93 @@
+---
+title: "Introduction to ForLion package"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to ForLion package}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+**Reference Manuscript**: Huang, Y., Li, K., Mandal, A. et al. ForLion: a new algorithm for D-optimal designs under general parametric statistical models with mixed factors. Stat Comput 34, 157 (2024). 
+
+This package implements the Forlion algorithm on the problem of designing an experiment with both discrete and continuous factors. The ForLion algorithm searches for locally optimal approximate designs under the D-criterion. When the true parameters are unknown, we can generate the EW D-optimal designs. This features allow users to create efficient and robust experimental designs that account for parameter uncertainty. The algorithm performs an exhaustive search in a design space with mixed factors while keeping high efficiency and reducing the number of distinct experimental settings. We mainly focus on generalized linear models (GLMs) and multinomial logit models (MLMs). Furthermore, implementing approximate designs with continuous settings can be challenging in practical applications. To address this issue, our package includes an algorithm that converts approximate designs into exact designs. This approximate-to-exact design algorithm ensures that the resulting exact design remains highly efficient while being more feasible for practical implementation.
+
+```{r setup}
+library(ForLion)
+library(psych)
+```
+
+
+### GLM Example
+
+This is an example of electrostatic discharge (ESD) experiment in Section 4 of the reference manuscript. 
+
+Lukemire et al. (2019) reconsidered the electrostatic discharge (ESD) experiment described by Whitman et al. (2006) with a binary response and five mixed factors. The first four factors LotA, LotB, ESD, Pulse take values in $\{-1,1\}$, and the fifth factor Voltage $\in [25, 45]$ is continuous.
+
+The logistic regression model is: 
+
+$\text{logit}(\mu)=\beta_0+\beta_1\text{LotA}+\beta_2\text{LotB}+\beta_3\text{ESD}+\beta_4\text{Pulse}+\beta_5\text{Voltage}+\beta_{34}(\text{ESD}\times\text{Pulse})$
+
+
+The parameter values: $\boldsymbol \beta = (\beta_0, \beta_1, \beta_2, \beta_3, \beta_4, \beta_5, \beta_{34})=(-7.5, 1.50,-0.2,-0.15,0.25,0.35,0.4)$
+
+```{r}
+hfunc.temp = function(y) {c(y,y[4]*y[5],1);};   # y -> h(y)=(y1,y2,y3,y4,y5,y4*y5,1)
+n.factor.temp = c(0, 2, 2, 2, 2)  # 1 continuous factor with 4 discrete factors
+factor.level.temp = list(c(25,45),c(-1,1),c(-1,1),c(-1,1),c(-1,1)) 
+link.temp="logit"
+beta.value = c(0.35,1.50,-0.2,-0.15,0.25,0.4,-7.5)       # continuous first and intercept last to fit hfunc.temp
+```
+
+Then, we use the *ForLion_GLM_Optimal()* function in ForLion package to search for the D-optimal design
+
+```{r}
+ForLion_GLM_Optimal(n.factor=n.factor.temp, factor.level=factor.level.temp, hfunc=hfunc.temp,bvec=beta.value,link=link.temp,reltol=1e-8, rel.diff=0.03, maxit=500, random=FALSE, logscale=TRUE)
+```
+
+### MLM Example
+
+This is an example of minimizing surface defects experiment, which is example in S.3 in the supplementary material of the reference manuscript. 
+
+A polysilicon deposition process for manufacturing very large-scale integrated (VLSI) circuits was described with six control factors, namely, Cleaning Method, Deposition temperature ($^\circ$C), Deposition pressure (mtorr), Nitrogen flow rate (seem), Silane flow rate (seem), and Settling time (minutes). Wu (2008) used the relevant experiment as an illustrative example and categorized the response Surface Defects from a count number to one of the five ordered categories, namely, Practically no surface defects (I, $0\sim 3$), Very few defects (II, $4\sim 30$), Some defects (III, $31\sim 300$), Many defects (IV, $301\sim 1000$), and Too many defects (V, $1001$ and above). 
+
+The example uses cumulative proportional odds model. 
+
+$\log\left(\frac{\pi_{i1}+\cdots+\pi_{ij}}{\pi_{i,j+1}+\cdots+\pi_{iJ}}\right)=\theta_{j} - \beta_1 x_{i1} - \beta_2 x_{i2} - \beta_3 x_{i3}\nonumber - \beta_4 x_{i4} - \beta_5 x_{i5} - \beta_6 x_{i6}$
+
+with $i=1, \ldots, m$ and $j=1, 2, 3, 4$ and $\boldsymbol \theta = (\theta_1, \theta_2, \theta_3, \theta_4, \beta_1, \beta_2, \beta_3, \beta_4, \beta_5, \beta_6)=(-1.77994301, -0.05287782,  1.86852211, 2.76330779,$ $ -0.94437464, 0.18504420,  -0.01638597, -0.03543202, -0.07060306, 0.10347917)$. 
+
+**Note: Always put continuous factors ahead of discrete factors, pay attention to the order of coefficients pairing with predictors**
+```{r}
+link.temp = "cumulative"
+## Note: Always put continuous factors ahead of discrete factors, pay attention to the order of coefficients paring with predictors
+n.factor.temp = c(0,0,0,0,0,2)  # 1 discrete factor w/ 2 levels + 5 continuous
+factor.level.temp = list(c(-25,25), c(-200,200),c(-150,0),c(-100,0),c(0,16),c(-1,1))
+J = 5 #num of response levels
+p = 10 #num of parameters
+
+hfunc.temp = function(y){
+  if(length(y) != 6){stop("Input should have length 6");}
+  model.mat = matrix(NA, nrow=5, ncol=10, byrow=TRUE)
+  model.mat[5,]=0
+  model.mat[1:4,1:4] = diag(4)
+  model.mat[1:4, 5] =((-1)*y[6])
+  model.mat[1:4, 6:10] = matrix(((-1)*y[1:5]), nrow=4, ncol=5, byrow=TRUE)
+  return(model.mat)
+}
+hprime.temp=NULL #use numerical gradient for optim, thus could be NULL, if use analytical gradient then define hprime function
+b.temp = c(-1.77994301, -0.05287782,  1.86852211, 2.76330779, -0.94437464, 0.18504420,  -0.01638597, -0.03543202, -0.07060306, 0.10347917)
+```
+
+Then, we can use *ForLion_MLM_Optimal()* function in ForLion package to search for the D-optimal design
+
+```{r}
+ForLion_MLM_Optimal(J=J, n.factor=n.factor.temp, factor.level=factor.level.temp, hfunc=hfunc.temp, h.prime=hprime.temp, bvec=b.temp, link=link.temp, Fi.func=Fi_MLM_func, delta=1e-2, epsilon=1e-12, reltol=1e-10, rel.diff=5e-4, maxit=500, optim_grad=FALSE)
+```
+
