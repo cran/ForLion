@@ -1,4 +1,4 @@
-#' Function to calculate first derivative of nu function given eta for cauchit link
+#' function to calculate first derivative of nu function given eta for cauchit link
 #'
 #' @param x vector of eta, eta=X*beta
 #'

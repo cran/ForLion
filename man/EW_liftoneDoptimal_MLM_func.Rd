@@ -27,7 +27,7 @@ EW_liftoneDoptimal_MLM_func(
 
 \item{J}{number of response levels in the multinomial logit model}
 
-\item{thetavec_matrix}{the matrix of the bootstrap parameter values of beta}
+\item{thetavec_matrix}{the matrix of the sampled parameter values of beta}
 
 \item{link}{multinomial logit model link function name "baseline", "cumulative", "adjacent", or"continuation", default to be "continuation"}
 
@@ -42,15 +42,15 @@ EW_liftoneDoptimal_MLM_func(
 \item{nram}{when random == TRUE, the function will generate nram number of initial points, default is 3}
 }
 \value{
-p reported EW D-optimal approximate allocation
+p              reported EW D-optimal approximate allocation
 
-p0 the initial approximate allocation that derived the reported EW D-optimal design
+p0             the initial approximate allocation that derived the reported EW D-optimal design
 
-Maximum the maximum of the determinant of the Expectation of Fisher information matrix
+Maximum        the maximum of the determinant of the expected Fisher information matrix
 
-Convergence TRUE or FALSE, whether the algorithm converges
+Convergence    TRUE or FALSE, whether the algorithm converges
 
-itmax, maximum iterations
+itmax          maximum iterations
 }
 \description{
 function of EW liftone for multinomial logit model

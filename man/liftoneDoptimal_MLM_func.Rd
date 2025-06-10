@@ -42,15 +42,15 @@ liftoneDoptimal_MLM_func(
 \item{nram}{when random == TRUE, the function will generate nram number of initial points, default is 3}
 }
 \value{
-p reported D-optimal approximate allocation
+p                reported D-optimal approximate allocation
 
-p0 the initial approximate allocation that derived the reported D-optimal design
+p0               the initial approximate allocation that derived the reported D-optimal design
 
-Maximum the maximum of the determinant of the Fisher information matrix
+Maximum          the maximum of the determinant of the Fisher information matrix
 
-Convergence TRUE or FALSE, whether the algorithm converges
+Convergence      TRUE or FALSE, whether the algorithm converges
 
-itmax, maximum iterations
+itmax            maximum iterations
 }
 \description{
 function of liftone for multinomial logit model

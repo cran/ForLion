@@ -7,6 +7,7 @@
 #' @param J number of response levels in the multinomial logit model
 #' @param n.factor vector of numbers of distinct levels, "0" indicates continuous factors, "0"s always come first, "2" or above indicates discrete factor, "1" is not allowed
 #' @param factor.level list of distinct levels, (min, max) for continuous factor, continuous factors first, should be the same order as n.factor
+#' @param xlist_fix the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables
 #' @param hfunc function for obtaining model matrix h(y) for given design point y, y has to follow the same order as n.factor
 #' @param h.prime function to obtain dX/dx
 #' @param bvec assumed parameter values of model parameters beta, same length of h(y)
@@ -25,14 +26,14 @@
 #' @param nram.initial when random.initial == TRUE, the function will run ForLion algorithm with nram.initial number of initial design points Xini, default is 3
 #' @param optim_grad TRUE or FALSE, default is FALSE, whether to use the analytical gradient function or numerical gradient for searching optimal new design point
 #'
-#' @return m the number of design points
-#' @return x.factor matrix of experimental factors with rows indicating design point
-#' @return p the reported D-optimal approximate allocation
-#' @return det the determinant of the maximum Fisher information
-#' @return convergence TRUE or FALSE, whether converge
-#' @return min.diff the minimum Euclidean distance between design points
-#' @return x.close  pair of design points with minimum distance
-#' @return itmax iteration of the algorithm
+#' @return m             the number of design points
+#' @return x.factor      matrix of experimental factors with rows indicating design point
+#' @return p             the reported D-optimal approximate allocation
+#' @return det           the determinant of the maximum Fisher information
+#' @return convergence   TRUE or FALSE, whether converge
+#' @return min.diff      the minimum Euclidean distance between design points
+#' @return x.close       pair of design points with minimum distance
+#' @return itmax         iteration of the algorithm
 #' @export
 #'
 #' @examples
@@ -57,14 +58,12 @@
 #' -0.01638597, -0.03543202, -0.07060306, 0.10347917)
 #'
 #' h.prime.temp = NULL #use numerical gradient (optim_grad=FALSE)
-#' ForLion_MLM_Optimal(J=J, n.factor=n.factor.temp, factor.level=factor.level.temp, hfunc=hfunc.temp,
-#' h.prime=h.prime.temp, bvec=bvec.temp, link=link.temp, optim_grad=FALSE)
+#' ForLion_MLM_Optimal(J=J, n.factor=n.factor.temp, factor.level=factor.level.temp, xlist_fix=NULL,
+#' hfunc=hfunc.temp,h.prime=h.prime.temp, bvec=bvec.temp, link=link.temp, optim_grad=FALSE)
 #'
 #'
 
-
-
-ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec, link="continuation", Fi.func=Fi_MLM_func, delta=1e-5, epsilon=1e-12, reltol=1e-5, rel.diff=0, maxit=100, random=FALSE, nram=3, rowmax=NULL, Xini=NULL, random.initial=FALSE, nram.initial=3, optim_grad=FALSE) {
+ForLion_MLM_Optimal <- function(J, n.factor, factor.level,xlist_fix=NULL, hfunc, h.prime, bvec, link="continuation", Fi.func=Fi_MLM_func, delta=1e-5, epsilon=1e-12, reltol=1e-5, rel.diff=0, maxit=100, random=FALSE, nram=3, rowmax=NULL, Xini=NULL, random.initial=FALSE, nram.initial=3, optim_grad=FALSE) {
   d.factor=length(n.factor);             # number of factors
   p.factor=length(bvec);                 # number of predictors
   k.continuous=sum(n.factor==0);         # number of continuous factors
@@ -72,7 +71,7 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
 
   #    Case I: all factors are discrete
   if(k.continuous==0) {
-    if(is.null(Xini)) xtemp=xmat_discrete_self(factor.level, rowmax=rowmax) else xtemp=Xini;
+    if(is.null(Xini)){ xtemp=xmat_discrete_self(factor.level, rowmax=rowmax)} else {xtemp=Xini;}
     m.design=nrow(xtemp); # initial number of design points
     X.mat = rep(0,J*p.factor*m.design);
     dim(X.mat)=c(J, p.factor, m.design)  # initial model matrix X
@@ -83,7 +82,7 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
 
     p0= rep(1/m.design, m.design)
     p0 = p0/sum(p0)
-    optemp=liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J, thetavec=bvec, link=link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram);
+    optemp=liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J=J, thetavec=bvec, link=link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram);
 
     m.design.ans=m.design=sum(optemp$p>0);       # updated number of design point
     x.factor.ans=x.design=xtemp[optemp$p>0,];  # updated list of design points
@@ -98,7 +97,7 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
   if(k.continuous==d.factor) {
     lvec=uvec=rep(0, d.factor);     # lower bounds and upper bounds for continuous factors
     for(i in 1:d.factor) {lvec[i]=min(factor.level[[i]]); uvec[i]=max(factor.level[[i]]);};
-    if(is.null(Xini)){initial.temp=design_initial_self(k.continuous=k.continuous, factor.level=factor.level, lvec=lvec, uvec=uvec, bvec=bvec, link=link, h.func=hfunc, Fi.func=Fi.func, delta=delta, epsilon = epsilon, maxit=maxit); xtemp=initial.temp$X; p0=initial.temp$p0} else {xtemp=Xini; p0=NULL}  #no initial design
+    if(is.null(Xini)){initial.temp=design_initial_self(k.continuous=k.continuous, factor.level=factor.level, MLM=TRUE,xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec=bvec, link=link, h.func=hfunc, Fi.func=Fi.func, delta=delta, epsilon = epsilon, maxit=maxit); xtemp=initial.temp$X; p0=initial.temp$p0} else {xtemp=Xini; p0=NULL}  #no initial design
     if(k.continuous==1) m.design=length(xtemp) else m.design=nrow(xtemp);                   # initial number of design points
     X.mat = rep(0,J*p.factor*m.design);
     dim(X.mat)=c(J, p.factor, m.design)  # initial model matrix X
@@ -109,7 +108,7 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
 
     if(is.null(p0)){p0 = rep(1/m.design, m.design)}
 
-    optemp=liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J, thetavec=bvec, link = link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram)
+    optemp=liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J=J, thetavec=bvec, link = link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram)
     # new point step (for each idiscrete, give d and partial d function, use optim to find max d compare to p)
     m.design=sum(optemp$p>0);       # updated number of design point ##deleting w_i = 0
     if(k.continuous==1){x.design=xtemp[optemp$p>0]}else{x.design=xtemp[optemp$p>0,];}  # updated list of design points
@@ -188,10 +187,10 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
             i1=which.min(apply(dtemp,1,min)); # index of design point to be merged
             i2=which.min(dtemp[i1,]); # index of design point to be merged
             if(k.continuous==1){
-              ystar1=(x.design_old[i1]+x.design_old[i2])/2; # merged design point
+              ystar1=(p.design_old[i1]*x.design_old[i1]+p.design_old[i2]*x.design_old[i2])/(p.design_old[i1]+p.design_old[i2]); # merged design point
               x.design_mer=c(x.design_old[-c(i1,i2)], ystar1)
             }else{
-              ystar1=(x.design_old[i1,]+x.design_old[i2,])/2; # merged design point
+              ystar1=(p.design_old[i1]*x.design_old[i1,]+p.design_old[i2]*x.design_old[i2,])/(p.design_old[i1]+p.design_old[i2]); # merged design point
               x.design_mer=rbind(x.design_old[-c(i1,i2), ], ystar1) # update x.design
             }
             p.design_mer=c(p.design_old[-c(i1,i2)], p.design_old[i1]+p.design_old[i2])
@@ -239,7 +238,7 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
       };
 
       #Go back to step3:lift-one
-      optemp=liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J, thetavec=bvec,link=link, reltol=reltol, maxit=maxit, p00=p.design, random=random, nram=nram)
+      optemp=liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J=J, thetavec=bvec,link=link, reltol=reltol, maxit=maxit, p00=p.design, random=random, nram=nram)
 
       #step4:deleting step new point step
       m.design=sum(optemp$p>0);       # updated number of design point ##deleting w_i = 0
@@ -314,7 +313,7 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
     if(random.initial){
       for(num in 1:nram.initial){
         #try different initial points
-        initial.temp=design_initial_self(k.continuous=k.continuous, factor.level=factor.level, lvec=lvec, uvec=uvec, bvec=bvec, link=link, h.func=hfunc, Fi.func=Fi.func, delta=delta, epsilon=epsilon, maxit=maxit); xtemp=initial.temp$X; p0=initial.temp$p0 #random initial design
+        initial.temp=design_initial_self(k.continuous=k.continuous, factor.level=factor.level, MLM=TRUE, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec=bvec, link=link, h.func=hfunc, Fi.func=Fi.func, delta=delta, epsilon=epsilon, maxit=maxit); xtemp=initial.temp$X; p0=initial.temp$p0 #random initial design
         if(k.continuous==1) m.design=length(xtemp) else m.design=nrow(xtemp);                   # initial number of design points
         X.mat = rep(0,J*p.factor*m.design);
         dim(X.mat)=c(J, p.factor, m.design)  # initial model matrix X
@@ -323,7 +322,7 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
           X.mat[,,i]=htemp;
         };
 
-        optemp=liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J, thetavec=bvec, link=link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram)
+        optemp=liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J=J, thetavec=bvec, link=link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram)
         # new point step (for each idiscrete, give d and partial d function, use optim to find max d compare to p)
         m.design=sum(optemp$p>0);       # updated number of design point ##deleting w_i = 0
         if(k.continuous==1){x.design=xtemp[optemp$p>0]}else{x.design=xtemp[optemp$p>0,];}  # updated list of design points
@@ -401,10 +400,10 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
             i1=which.min(apply(dtemp,1,min)); # index of design point to be merged
             i2=which.min(dtemp[i1,]); # index of design point to be merged
             if(k.continuous==1){
-              ystar1=(x.design_old[i1]+x.design_old[i2])/2; # merged design point
+              ystar1=(p.design_old[i1]*x.design_old[i1]+p.design_old[i2]*x.design_old[i2])/(p.design_old[i1]+p.design_old[i2]); # merged design point
               x.design_mer=c(x.design_old[-c(i1,i2)], ystar1)
             }else{
-              ystar1=(x.design_old[i1,]+x.design_old[i2,])/2; # merged design point
+              ystar1=(p.design_old[i1]*x.design_old[i1,]+p.design_old[i2]*x.design_old[i2,])/(p.design_old[i1]+p.design_old[i2]);# merged design point
               x.design_mer=rbind(x.design_old[-c(i1,i2), ], ystar1) # update x.design
             }
             p.design_mer=c(p.design_old[-c(i1,i2)], p.design_old[i1]+p.design_old[i2])
@@ -452,7 +451,7 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
           };
 
           #Go back to step3:lift-one
-          optemp=liftoneDoptimal_MLM_func(m=m.design,  p=p.factor, Xi=X.mat, J, thetavec=bvec,link=link, reltol=reltol, maxit=maxit, p00=p.design, random=random, nram=nram)
+          optemp=liftoneDoptimal_MLM_func(m=m.design,  p=p.factor, Xi=X.mat, J=J, thetavec=bvec,link=link, reltol=reltol, maxit=maxit, p00=p.design, random=random, nram=nram)
 
           #step4:deleting step new point step
           m.design=sum(optemp$p>0);       # updated number of design point ##deleting w_i = 0
@@ -535,7 +534,7 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
   if((k.continuous>0)&&(k.continuous<d.factor)) {
     lvec=uvec=rep(0, k.continuous);     # lower bounds and upper bounds for continuous factors
     for(i in 1:k.continuous) {lvec[i]=min(factor.level[[i]]); uvec[i]=max(factor.level[[i]]);}; #read in continuous covariates boundary
-    if(is.null(Xini)){initial.temp=design_initial_self(k.continuous=k.continuous, factor.level=factor.level, lvec=lvec, uvec=uvec, bvec=bvec, link=link, h.func=hfunc, Fi.func=Fi.func, delta=delta, epsilon = epsilon, maxit=500); xtemp=initial.temp$X; p0=initial.temp$p0} else {xtemp=Xini; p0=NULL}  #no initial design
+    if(is.null(Xini)){initial.temp=design_initial_self(k.continuous=k.continuous, factor.level=factor.level, MLM=TRUE, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec=bvec, link=link, h.func=hfunc, Fi.func=Fi.func, delta=delta, epsilon = epsilon, maxit=500); xtemp=initial.temp$X; p0=initial.temp$p0} else {xtemp=Xini; p0=NULL}  #no initial design
 
     ## update on 2022/08/28 change Xw.discrete.self function to sequentially and randomly choose x_i^0 => design_initial_self function
 
@@ -548,7 +547,7 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
     };
     if(is.null(p0)){p0 = rep(1/m.design, m.design)}
 
-    optemp=liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J, thetavec=bvec, link=link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram)
+    optemp=liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J=J, thetavec=bvec, link=link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram)
 
     # new point step (for each idiscrete, give d and partial d function, use optim to find max d compare to p)
     m.design=sum(optemp$p>0);       # updated number of design point ##deleting w_i = 0
@@ -568,7 +567,8 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
     inv.F.mat = solve(F.mat, tol=.Machine$double.xmin)
 
     #calculate d(x, Xi) function
-    xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
+    if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}
+    else{xdiscrete=xlist_fix;}
     ndiscrete=dim(xdiscrete)[1];
 
     for(idiscrete in 1:ndiscrete) {
@@ -640,7 +640,7 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
             #identify and merge the two closest design points
             i1=which.min(apply(dtemp,1,min)); # index of design point to be merged
             i2=which.min(dtemp[i1,]); # index of design point to be merged
-            ystar1=(x.design_old[i1,]+x.design_old[i2,])/2; # merged design point
+            ystar1=(p.design_old[i1]*x.design_old[i1,]+p.design_old[i2]*x.design_old[i2,])/(p.design_old[i1]+p.design_old[i2]); # merged design point
             x.design_mer=rbind(x.design_old[-c(i1,i2),], ystar1); # update x.design
             p.design_mer=c(p.design_old[-c(i1,i2)], p.design_old[i1]+p.design_old[i2])
             m.design_mer=m.design_old-1
@@ -687,7 +687,7 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
       };
 
       #Go back to step3:lift-one
-      optemp=liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J, thetavec=bvec, link=link, reltol=reltol, maxit=maxit, p00=p.design, random=random, nram=nram)
+      optemp=liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J=J, thetavec=bvec, link=link, reltol=reltol, maxit=maxit, p00=p.design, random=random, nram=nram)
 
       #step4:deleting step new point step
       m.design=sum(optemp$p>0);       # updated number of design point ##deleting w_i = 0
@@ -708,7 +708,9 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
       inv.F.mat = solve(F.mat, tol=.Machine$double.xmin)
 
       #calculate d(x, Xi) function
-      xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
+      if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}
+      else{xdiscrete=xlist_fix;}
+      #xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
       ndiscrete=dim(xdiscrete)[1];
       for(idiscrete in 1:ndiscrete) {
         hfunc1 <- function(y) { hfunc(c(y, xdiscrete[idiscrete,])); };
@@ -776,7 +778,7 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
     if(random.initial){
       for(num in 1:nram.initial){
         #try different random x_i^0
-        initial.temp=design_initial_self(k.continuous=k.continuous, factor.level=factor.level, lvec=lvec, uvec=uvec, bvec=bvec, link=link, h.func=hfunc, Fi.func=Fi.func, delta=delta, epsilon = epsilon, maxit=500); xtemp=initial.temp$X; p0=initial.temp$p0  #random initial design
+        initial.temp=design_initial_self(k.continuous=k.continuous, factor.level=factor.level, MLM=TRUE, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec=bvec, link=link, h.func=hfunc, Fi.func=Fi.func, delta=delta, epsilon = epsilon, maxit=500); xtemp=initial.temp$X; p0=initial.temp$p0  #random initial design
 
         ## update on 2022/08/28 change Xw.discrete.self function to sequentially and randomly choose x_i^0 => design_initial_self function
 
@@ -788,7 +790,7 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
           X.mat[,,i]=htemp;
         };
 
-        optemp=liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J, thetavec=bvec, link=link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram)
+        optemp=liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J=J, thetavec=bvec, link=link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram)
 
         # new point step (for each idiscrete, give d and partial d function, use optim to find max d compare to p)
         m.design=sum(optemp$p>0);       # updated number of design point ##deleting w_i = 0
@@ -808,7 +810,9 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
         inv.F.mat = solve(F.mat, tol=.Machine$double.xmin)
 
         #calculate d(x, Xi) function
-        xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
+        if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}
+        else{xdiscrete=xlist_fix;}
+        #xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
         ndiscrete=dim(xdiscrete)[1];
         for(idiscrete in 1:ndiscrete) {
           hfunc1 <- function(y) { hfunc(c(y, xdiscrete[idiscrete,])); };
@@ -854,7 +858,6 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
 
         } #end of for loop of idiscrete
 
-
         nit = 1
         while((-fvalue/p.factor-1 > reltol)&&(nit < maxit)) {
           # add new point into the design
@@ -879,7 +882,7 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
             #identify and merge the two closest design points
             i1=which.min(apply(dtemp,1,min)); # index of design point to be merged
             i2=which.min(dtemp[i1,]); # index of design point to be merged
-            ystar1=(x.design_old[i1,]+x.design_old[i2,])/2; # merged design point
+            ystar1=(p.design_old[i1]*x.design_old[i1,]+p.design_old[i2]*x.design_old[i2,])/(p.design_old[i1]+p.design_old[i2]); # merged design point
             x.design_mer=rbind(x.design_old[-c(i1,i2),], ystar1); # update x.design
             p.design_mer=c(p.design_old[-c(i1,i2)], p.design_old[i1]+p.design_old[i2])
             m.design_mer=m.design_old-1
@@ -926,7 +929,7 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
           };
 
           #Go back to step3:lift-one
-          optemp=liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J, thetavec=bvec, link=link, reltol=reltol, maxit=maxit, p00=p.design, random=random, nram=nram)
+          optemp=liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J=J, thetavec=bvec, link=link, reltol=reltol, maxit=maxit, p00=p.design, random=random, nram=nram)
 
           #step4:deleting step new point step
           m.design=sum(optemp$p>0);       # updated number of design point ##deleting w_i = 0
@@ -947,7 +950,9 @@ ForLion_MLM_Optimal <- function(J, n.factor, factor.level, hfunc, h.prime, bvec,
           inv.F.mat = solve(F.mat, tol=.Machine$double.xmin)
 
           #calculate d(x, Xi) function
-          xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
+          if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}
+          else{xdiscrete=xlist_fix;}
+          # xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
           ndiscrete=dim(xdiscrete)[1];
           for(idiscrete in 1:ndiscrete) {
             hfunc1 <- function(y) { hfunc(c(y, xdiscrete[idiscrete,])); };

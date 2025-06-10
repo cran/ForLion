@@ -7,7 +7,7 @@
 nu_cauchit_self(x)
 }
 \arguments{
-\item{x}{a list of eta - X*beta}
+\item{x}{a list of eta = X*beta}
 }
 \value{
 diagonal element of W matrix which is nu(eta)

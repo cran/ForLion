@@ -1,4 +1,4 @@
-#' Function to calculate dEu/dx in the gradient of d(x, Xi), will be used in EW_ForLion_MLM_func() function
+#' function to calculate dEu/dx in the gradient of d(x, Xi), will be used in EW_ForLion_MLM_func() function
 #'
 #' @param xi a vector of design point
 #' @param bvec_matrix the matrix of the bootstrap parameter values of beta
@@ -83,9 +83,8 @@ EW_dprime_func_self <- function(xi, bvec_matrix, h.func, h.prime, inv.F.mat, EUx
     #step2: matrix du/dpi
     du_dpi = rep(NA, J*J*J)
     dim(du_dpi) = c(J, J, J)
-    du_dpi[,J,] = matrix(0,nrow=J, ncol=J)
+    du_dpi[,J,] = 0
     #define du_dpi
-
     for(s in 1:(J-1)){
       if(link=="continuation"){
         if(s==1){du_dpi[s,s,] = c((1-gamma[1]^2), rep(pi[1]^2, J-1))}

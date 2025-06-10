@@ -11,11 +11,11 @@
 #' @param random TRUE or FALSE, if TRUE then the function will run with additional "nram" number of initial allocation p00, default to be TRUE
 #' @param nram when random == TRUE, the function will generate nram number of initial points, default is 3
 #'
-#' @return p reported D-optimal approximate allocation
-#' @return p0 the initial approximate allocation that derived the reported D-optimal design
-#' @return Maximum the maximum of the determinant of the Fisher information matrix
-#' @return Convergence TRUE or FALSE, whether the algorithm converges
-#' @return itmax, maximum iterations
+#' @return p                reported D-optimal approximate allocation
+#' @return p0               the initial approximate allocation that derived the reported D-optimal design
+#' @return Maximum          the maximum of the determinant of the Fisher information matrix
+#' @return Convergence      TRUE or FALSE, whether the algorithm converges
+#' @return itmax            maximum iterations
 #' @export
 #'
 #' @examples
@@ -84,6 +84,49 @@ liftoneDoptimal_MLM_func <- function(m, p, Xi, J, thetavec,link = "continuation"
       cvec <- rep(0, J-1);  # c1, c2, ..., c_{J-1}
       for(j in 1:(J-1)) cvec[j]=(j+1)^p*j^(J-1-p)*fiz(1/(j+1), p0, io[ia])-j^(J-1)*avec[1];
       avec[J:2]=Bn1%*%cvec;
+      if(J<=5){
+        ftemp <- function(z) {   # f_i(z)
+          obj=(1-z)^(p-J+1)*sum(avec*z^(0:(J-1))*(1-z)^((J-1):0));
+          # cat("\navec", avec, "\nz",z, "\nsum", sum(avec*z^(0:(J-1))*(1-z)^((J-1):0)),"\nobject",obj,"\n") #delete
+          return(obj)
+        }
+        if(J==3){
+          c0.temp <- avec[1]*p - avec[2]
+          c1.temp <- avec[2]*p+avec[2]-2*avec[1]*p-2*avec[3]
+          c2.temp <- avec[1]*p - avec[2]*p + avec[3]*p
+          sol.temp = polynomial_sol_J3(c0.temp, c1.temp, c2.temp) #return the two analytical solutions
+        }
+        if(J==4){
+          c0.temp <- avec[1]*p - avec[2]
+          c1.temp <- -3*avec[1]*p + 2*avec[2] + p*avec[2] - 2*avec[3]
+          c2.temp <- 3*avec[1]*p - (1+2*p)*avec[2] + (2+p)*avec[3] - 3*avec[4]
+          c3.temp <- p*(-avec[1] + avec[2] - avec[3] + avec[4])
+          sol.temp = polynomial_sol_J4(c0.temp, c1.temp, c2.temp, c3.temp) #return the three analytical solutions
+        }
+        if(J==5){
+          #define the coefficients of 4th order polynomial function
+          c0.temp = -avec[2]+avec[1]*p
+          c1.temp = 3*avec[2] - 2*avec[3] - 4*avec[1]*p + avec[2]*p
+          c2.temp = -3*avec[2] + 4*avec[3] - 3*avec[4] + 6*avec[1]*p - 3*avec[2]*p + avec[3]*p
+          c3.temp = avec[2] - 2*avec[3] + 3*avec[4] - 4*avec[5] -4*avec[1]*p + 3*avec[2]*p - 2*avec[3]*p + avec[4]*p
+          c4.temp =avec[1]*p - avec[2]*p + avec[3]*p - avec[4]*p + avec[5]*p
+          sol.temp = polynomial_sol_J5(c0.temp, c1.temp, c2.temp, c3.temp, c4.temp) #return the four analytical solutions
+        }
+        #remove the complex solution, only use real solution
+        sol.temp[abs(Im(sol.temp)) > 1e-6] = NA
+        sol.temp[Re(sol.temp) < 1e-6] = NA
+        sol.temp[Re(sol.temp) > (1-1e-6)] = NA
+        sol.temp = Re(stats::na.omit(sol.temp))
+
+        #all the four solutions are complex zstar=0 if not find the max ftemp
+        zstar=0; fstar=avec[1];
+        if(length(sol.temp)>0){
+          for(value in sol.temp){
+            ftemp.value = ftemp(value)
+            if(ftemp.value > fstar){zstar=value; fstar=ftemp.value}
+          }#for loop end
+        } #end if
+      }else{
       ftemp <- function(z) {   # -f_i(z)
         obj=-(1-z)^(p-J+1)*sum(avec*z^(0:(J-1))*(1-z)^((J-1):0));
         # cat("\navec", avec, "\nz",z, "\nsum", sum(avec*z^(0:(J-1))*(1-z)^((J-1):0)),"\nobject",obj,"\n") #delete
@@ -97,6 +140,7 @@ liftoneDoptimal_MLM_func <- function(m, p, Xi, J, thetavec,link = "continuation"
       zstar=temp$par;         # z_*
       fstar=-temp$value;
       if(fstar <= avec[1]) {zstar=0; fstar=avec[1];};
+      }
       ptemp1 = p0*(1-zstar)/(1-p0[io[ia]]);
       ptemp1[io[ia]] = zstar;
       if(fstar > maximum) {maximum = fstar; p0=ptemp1;};
@@ -156,19 +200,63 @@ liftoneDoptimal_MLM_func <- function(m, p, Xi, J, thetavec,link = "continuation"
           cvec <- rep(0, J-1);  # c1, c2, ..., c_{J-1}
           for(j in 1:(J-1)) cvec[j]=(j+1)^p*j^(J-1-p)*fiz(1/(j+1), p0, io[ia])-j^(J-1)*avec[1];
           avec[J:2]=Bn1%*%cvec;
-          ftemp <- function(z) {   # -f_i(z)
-            obj=-(1-z)^(p-J+1)*sum(avec*z^(0:(J-1))*(1-z)^((J-1):0));
-            # cat("\navec", avec, "\nz",z, "\nsum", sum(avec*z^(0:(J-1))*(1-z)^((J-1):0)),"\nobject",obj,"\n") #delete
-            return(obj)
+          if(J<=5){
+            ftemp <- function(z) {   # f_i(z)
+              obj=(1-z)^(p-J+1)*sum(avec*z^(0:(J-1))*(1-z)^((J-1):0));
+              # cat("\navec", avec, "\nz",z, "\nsum", sum(avec*z^(0:(J-1))*(1-z)^((J-1):0)),"\nobject",obj,"\n") #delete
+              return(obj)
+            }
+            if(J==3){
+              c0.temp <- avec[1]*p - avec[2]
+              c1.temp <- avec[2]*p+avec[2]-2*avec[1]*p-2*avec[3]
+              c2.temp <- avec[1]*p - avec[2]*p + avec[3]*p
+              sol.temp = polynomial_sol_J3(c0.temp, c1.temp, c2.temp) #return the two analytical solutions
+            }
+            if(J==4){
+              c0.temp <- avec[1]*p - avec[2]
+              c1.temp <- -3*avec[1]*p + 2*avec[2] + p*avec[2] - 2*avec[3]
+              c2.temp <- 3*avec[1]*p - (1+2*p)*avec[2] + (2+p)*avec[3] - 3*avec[4]
+              c3.temp <- p*(-avec[1] + avec[2] - avec[3] + avec[4])
+              sol.temp = polynomial_sol_J4(c0.temp, c1.temp, c2.temp, c3.temp) #return the three analytical solutions
+            }
+            if(J==5){
+              #define the coefficients of 4th order polynomial function
+              c0.temp = -avec[2]+avec[1]*p
+              c1.temp = 3*avec[2] - 2*avec[3] - 4*avec[1]*p + avec[2]*p
+              c2.temp = -3*avec[2] + 4*avec[3] - 3*avec[4] + 6*avec[1]*p - 3*avec[2]*p + avec[3]*p
+              c3.temp = avec[2] - 2*avec[3] + 3*avec[4] - 4*avec[5] -4*avec[1]*p + 3*avec[2]*p - 2*avec[3]*p + avec[4]*p
+              c4.temp =avec[1]*p - avec[2]*p + avec[3]*p - avec[4]*p + avec[5]*p
+              sol.temp = polynomial_sol_J5(c0.temp, c1.temp, c2.temp, c3.temp, c4.temp) #return the four analytical solutions
+            }
+            #remove the complex solution, only use real solution
+            sol.temp[abs(Im(sol.temp)) > 1e-6] = NA
+            sol.temp[Re(sol.temp) < 1e-6] = NA
+            sol.temp[Re(sol.temp) > (1-1e-6)] = NA
+            sol.temp = Re(stats::na.omit(sol.temp))
+
+            #all the four solutions are complex zstar=0 if not find the max ftemp
+            zstar=0; fstar=avec[1];
+            if(length(sol.temp)>0){
+              for(value in sol.temp){
+                ftemp.value = ftemp(value)
+                if(ftemp.value > fstar){zstar=value; fstar=ftemp.value}
+              }#for loop end
+            } #end if
+          }else{
+            ftemp <- function(z) {   # -f_i(z)
+              obj=-(1-z)^(p-J+1)*sum(avec*z^(0:(J-1))*(1-z)^((J-1):0));
+              # cat("\navec", avec, "\nz",z, "\nsum", sum(avec*z^(0:(J-1))*(1-z)^((J-1):0)),"\nobject",obj,"\n") #delete
+              return(obj)
+            }
+            ftemp1 <- function(z) {  # -f'_i(z)
+              #   -(1-z)^(p-J)*sum(((1:(J-1))-P*z)*avec[2:J]*z^(0:(J-2))*(1-z)^((J-2):0))+p*avec[1]*(1-z)^(p-1);
+              -(1-z)^(p-J+1)*sum((1:(J-1))*avec[2:J]*z^(0:(J-2))*(1-z)^((J-2):0))+(1-z)^(p-J)*sum((p:(p-J+1))*avec[1:J]*z^(0:(J-1))*(1-z)^((J-1):0));
+            }
+            temp=stats::optim(par=0.5, fn=ftemp, gr=ftemp1, method="L-BFGS-B", lower=0, upper=1, control=list(maxit=maxit, factr=1e5));
+            zstar=temp$par;         # z_*
+            fstar=-temp$value;
+            if(fstar <= avec[1]) {zstar=0; fstar=avec[1];};
           }
-          ftemp1 <- function(z) {  # -f'_i(z)
-            #   -(1-z)^(p-J)*sum(((1:(J-1))-P*z)*avec[2:J]*z^(0:(J-2))*(1-z)^((J-2):0))+p*avec[1]*(1-z)^(p-1);
-            -(1-z)^(p-J+1)*sum((1:(J-1))*avec[2:J]*z^(0:(J-2))*(1-z)^((J-2):0))+(1-z)^(p-J)*sum((p:(p-J+1))*avec[1:J]*z^(0:(J-1))*(1-z)^((J-1):0));
-          }
-          temp=stats::optim(par=0.5, fn=ftemp, gr=ftemp1, method="L-BFGS-B", lower=0, upper=1, control=list(maxit=maxit, factr=1e5));
-          zstar=temp$par;         # z_*
-          fstar=-temp$value;
-          if(fstar <= avec[1]) {zstar=0; fstar=avec[1];};
           ptemp1 = p0*(1-zstar)/(1-p0[io[ia]]);
           ptemp1[io[ia]] = zstar;
           if(fstar > maximum) {maximum = fstar; p0=ptemp1;};

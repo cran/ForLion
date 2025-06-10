@@ -7,6 +7,7 @@
 ForLion_GLM_Optimal(
   n.factor,
   factor.level,
+  xlist_fix = NULL,
   hfunc,
   bvec,
   link,
@@ -24,6 +25,8 @@ ForLion_GLM_Optimal(
 \item{n.factor}{vector of numbers of distinct levels, "0" indicates continuous factors, "0"s always come first, "2" or above indicates discrete factor, "1" is not allowed}
 
 \item{factor.level}{list of distinct levels, (min, max) for continuous factor, continuous factors first, should be the same order as n.factor}
+
+\item{xlist_fix}{the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables}
 
 \item{hfunc}{function for obtaining model matrix h(y) for given design point y, y has to follow the same order as n.factor}
 
@@ -76,8 +79,8 @@ n.factor.temp = c(0, 2, 2, 2, 2)  # 1 continuous factor with 4 discrete factors
 factor.level.temp = list(c(25,45),c(-1,1),c(-1,1),c(-1,1),c(-1,1))
 link.temp="logit"
 b.temp = c(0.3197169,  1.9740922, -0.1191797, -0.2518067,  0.1970956,  0.3981632, -7.6648090)
-ForLion_GLM_Optimal(n.factor=n.factor.temp, factor.level=factor.level.temp, hfunc=hfunc.temp,
-bvec=b.temp, link=link.temp, reltol=1e-2, rel.diff=0.03, maxit=500, random=FALSE,
-nram=3, logscale=TRUE)
+ForLion_GLM_Optimal(n.factor=n.factor.temp, factor.level=factor.level.temp, xlist_fix=NULL,
+hfunc=hfunc.temp, bvec=b.temp, link=link.temp, reltol=1e-2, rel.diff=0.03, maxit=500,
+random=FALSE,nram=3, logscale=TRUE)
 
 }

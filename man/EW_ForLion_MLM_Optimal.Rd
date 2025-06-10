@@ -8,6 +8,7 @@ EW_ForLion_MLM_Optimal(
   J,
   n.factor,
   factor.level,
+  xlist_fix = NULL,
   hfunc,
   h.prime,
   bvec_matrix,
@@ -34,11 +35,13 @@ EW_ForLion_MLM_Optimal(
 
 \item{factor.level}{list of distinct levels, (min, max) for continuous factor, continuous factors first, should be the same order as n.factor}
 
+\item{xlist_fix}{the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables}
+
 \item{hfunc}{function for obtaining model matrix h(y) for given design point y, y has to follow the same order as n.factor}
 
 \item{h.prime}{function to obtain dX/dx}
 
-\item{bvec_matrix}{the matrix of the bootstrap parameter values of beta}
+\item{bvec_matrix}{the matrix of the sampled parameter values of beta}
 
 \item{link}{link function, default "continuation", other choices "baseline", "cumulative", and "adjacent"}
 
@@ -54,9 +57,9 @@ EW_ForLion_MLM_Optimal(
 
 \item{maxit}{the maximum number of iterations, default value 100}
 
-\item{random}{TRUE or FALSE, if TRUE then the function will run EW lift-one with additional "nram" number of random approximate allocation, default to be FALSE}
+\item{random}{TRUE or FALSE, if TRUE then the function will run lift-one with additional "nram" number of random approximate allocation, default to be FALSE}
 
-\item{nram}{when random == TRUE, the function will run EW lift-one nram number of initial proportion p00, default is 3}
+\item{nram}{when random == TRUE, the function will run lift-one nram number of initial proportion p00, default is 3}
 
 \item{rowmax}{maximum number of points in the initial design, default NULL indicates no restriction}
 
@@ -69,24 +72,27 @@ EW_ForLion_MLM_Optimal(
 \item{optim_grad}{TRUE or FALSE, default is FALSE, whether to use the analytical gradient function or numerical gradient for searching optimal new design point}
 }
 \value{
-m the number of design points
+m           the number of design points
 
-x.factor matrix of experimental factors with rows indicating design point
+x.factor    matrix of experimental factors with rows indicating design point
 
-p the reported EW D-optimal approximate allocation
+p           the reported EW D-optimal approximate allocation
 
-det the determinant of the maximum Expectation of Fisher information
+det         the determinant of the maximum Expectation of Fisher information
 
 convergence TRUE or FALSE, whether converge
 
-min.diff the minimum Euclidean distance between design points
+min.diff    the minimum Euclidean distance between design points
 
-x.close  pair of design points with minimum distance
+x.close     pair of design points with minimum distance
 
-itmax iteration of the algorithm
+itmax       iteration of the algorithm
 }
 \description{
-EW ForLion function for multinomial logit models
+Function for EW ForLion algorithm to find EW D-optimal design under multinomial logit models with mixed factors.
+Reference Section 3 of Lin, Huang, Yang (2025).
+Factors may include discrete factors with finite number of distinct levels and continuous factors with specified interval range (min, max), continuous factors, if any, must serve as main-effects only, allowing merging points that are close enough.
+Continuous factors first then discrete factors, model parameters should in the same order of factors.
 }
 \examples{
 J=3
@@ -96,18 +102,19 @@ matrix(data=c(1,y,y*y,0,0,0,0,0,1,y,0,0,0,0,0), nrow=3, ncol=5, byrow=TRUE)
 } #hfunc is a 3*5 matrix, transfer x design matrix to model matrix for emergence of flies example
 
 hprime.temp = function(y){
-matrix(data=c(0, 1, 2*y, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0), nrow=3, ncol=5, byrow=TRUE)
+list(matrix_1 =matrix(data=c(0, 1, 2*y, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0),
+    nrow=3, ncol=5, byrow=TRUE))
 }
 
 link.temp = "continuation"
 n.factor.temp = c(0)  # 1 continuous factor no discrete factor in EW ForLion
-factor.level.temp = list(c(80,200)) #boundary for continuous parameter in Forlion
+factor.level.temp = list(c(80,200)) #boundary for continuous parameter in EW Forlion
 bvec_bootstrap<-matrix(c(-0.2401, -1.9292, -2.7851, -1.614,-1.162,
                          -0.0535, -0.0274, -0.0096,-0.0291, -0.04,
                           0.0004,  0.0003,  0.0002,  0.0003,  0.1,
                          -9.2154, -9.7576, -9.6818, -8.5139, -8.56),nrow=4,byrow=TRUE)
 EW_ForLion_MLM_Optimal(J=J, n.factor=n.factor.temp, factor.level=factor.level.temp,
-         hfunc=hfunc.temp,h.prime=h.prime.temp, bvec_matrix=bvec_bootstrap,rel.diff=1,
-         link=link.temp, optim_grad=FALSE)
+         xlist_fix=NULL, hfunc=hfunc.temp,h.prime=h.prime.temp, bvec_matrix=bvec_bootstrap,
+         rel.diff=1, link=link.temp, optim_grad=FALSE)
 
 }

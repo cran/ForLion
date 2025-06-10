@@ -8,6 +8,7 @@ ForLion_MLM_Optimal(
   J,
   n.factor,
   factor.level,
+  xlist_fix = NULL,
   hfunc,
   h.prime,
   bvec,
@@ -33,6 +34,8 @@ ForLion_MLM_Optimal(
 \item{n.factor}{vector of numbers of distinct levels, "0" indicates continuous factors, "0"s always come first, "2" or above indicates discrete factor, "1" is not allowed}
 
 \item{factor.level}{list of distinct levels, (min, max) for continuous factor, continuous factors first, should be the same order as n.factor}
+
+\item{xlist_fix}{the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables}
 
 \item{hfunc}{function for obtaining model matrix h(y) for given design point y, y has to follow the same order as n.factor}
 
@@ -69,21 +72,21 @@ ForLion_MLM_Optimal(
 \item{optim_grad}{TRUE or FALSE, default is FALSE, whether to use the analytical gradient function or numerical gradient for searching optimal new design point}
 }
 \value{
-m the number of design points
+m             the number of design points
 
-x.factor matrix of experimental factors with rows indicating design point
+x.factor      matrix of experimental factors with rows indicating design point
 
-p the reported D-optimal approximate allocation
+p             the reported D-optimal approximate allocation
 
-det the determinant of the maximum Fisher information
+det           the determinant of the maximum Fisher information
 
-convergence TRUE or FALSE, whether converge
+convergence   TRUE or FALSE, whether converge
 
-min.diff the minimum Euclidean distance between design points
+min.diff      the minimum Euclidean distance between design points
 
-x.close  pair of design points with minimum distance
+x.close       pair of design points with minimum distance
 
-itmax iteration of the algorithm
+itmax         iteration of the algorithm
 }
 \description{
 Function for ForLion algorithm to find D-optimal design under multinomial logit models with mixed factors.
@@ -113,8 +116,8 @@ bvec.temp=c(-1.77994301, -0.05287782,  1.86852211, 2.76330779, -0.94437464, 0.18
 -0.01638597, -0.03543202, -0.07060306, 0.10347917)
 
 h.prime.temp = NULL #use numerical gradient (optim_grad=FALSE)
-ForLion_MLM_Optimal(J=J, n.factor=n.factor.temp, factor.level=factor.level.temp, hfunc=hfunc.temp,
-h.prime=h.prime.temp, bvec=bvec.temp, link=link.temp, optim_grad=FALSE)
+ForLion_MLM_Optimal(J=J, n.factor=n.factor.temp, factor.level=factor.level.temp, xlist_fix=NULL,
+hfunc=hfunc.temp,h.prime=h.prime.temp, bvec=bvec.temp, link=link.temp, optim_grad=FALSE)
 
 
 }

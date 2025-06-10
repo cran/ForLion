@@ -2,11 +2,13 @@
 % Please edit documentation in R/design_initial_self.R
 \name{design_initial_self}
 \alias{design_initial_self}
-\title{function to generate random initial design with design points and the approximate allocation}
+\title{function to generate initial design with design points and the approximate allocation}
 \usage{
 design_initial_self(
   k.continuous,
   factor.level,
+  MLM,
+  xlist_fix = NULL,
   lvec,
   uvec,
   bvec,
@@ -22,6 +24,10 @@ design_initial_self(
 \item{k.continuous}{number of continuous variables}
 
 \item{factor.level}{lower, upper limit of continuous variables, and discrete levels of categorical variables, continuous factors come first}
+
+\item{MLM}{TRUE or FALSE, TRUE: generate initial design for multinomial logistic model, FALSE: generate initial design for generalized linear model}
+
+\item{xlist_fix}{the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables}
 
 \item{lvec}{lower limit of continuous variables}
 
@@ -42,14 +48,14 @@ design_initial_self(
 \item{maxit}{maximum number of iterations}
 }
 \value{
-X matrix of initial design point
+X      matrix of initial design point
 
-p0 initial random approximate allocation
+p0     initial random approximate allocation
 
-f.det the determinant of Fisher information matrix for the random initial design
+f.det  the determinant of Fisher information matrix for the initial design
 }
 \description{
-function to generate random initial design with design points and the approximate allocation
+function to generate initial design with design points and the approximate allocation
 }
 \examples{
 k.continuous.temp=5
@@ -71,8 +77,9 @@ if(length(y) != 6){stop("Input should have length 6");}
 bvec.temp=c(-1.77994301, -0.05287782,  1.86852211, 2.76330779, -0.94437464, 0.18504420,
 -0.01638597, -0.03543202, -0.07060306, 0.10347917)
 
-design_initial_self(k.continuous=k.continuous.temp, factor.level=n.factor.temp, lvec=lvec.temp,
-uvec=uvec.temp, bvec=bvec.temp, h.func=hfunc.temp, link=link.temp)
+design_initial_self(k.continuous=k.continuous.temp, factor.level=n.factor.temp,
+MLM=TRUE,xlist_fix=NULL, lvec=lvec.temp,uvec=uvec.temp, bvec=bvec.temp,
+h.func=hfunc.temp,link=link.temp)
 
 
 }

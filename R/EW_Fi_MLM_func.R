@@ -1,11 +1,11 @@
-#' Function to generate the Expectation of fisher information at one design point xi for multinomial logit models
+#' function to generate the expected fisher information at one design point xi for multinomial logit models
 #'
 #' @param X_x model matrix for a specific design point x_i, X_x=h.func(xi)
-#' @param bvec_matrix the matrix of the bootstrap parameter values of beta
+#' @param bvec_matrix the matrix of the sampled parameter values of beta
 #' @param link multinomial logit model link function name "baseline", "cumulative", "adjacent", or"continuation", default to be "continuation"
 #'
-#' @return F_x Fisher information matrix at x_i
-#' @return EU_x U matrix for calculation the Expectation of Fisher information matrix at x_i
+#' @return F_x     The expected Fisher information matrix at x_i
+#' @return EU_x    E(U) matrix for calculation the expected of Fisher information matrix at x_i
 #' @export
 #'
 #' @examples

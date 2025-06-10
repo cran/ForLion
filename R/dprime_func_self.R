@@ -1,4 +1,4 @@
-#' Function to calculate du/dx in the gradient of d(x, Xi), will be used in ForLion_MLM_func() function, details see Appendix C in Huang, Li, Mandal, Yang (2024)
+#' function to calculate du/dx in the gradient of d(x, Xi), will be used in ForLion_MLM_func() function, details see Appendix C in Huang, Li, Mandal, Yang (2024)
 #' @param xi a vector of design point
 #' @param bvec parameter of the multinomial logistic regression model
 #' @param h.func function, is used to transfer xi to model matrix (e.g. add interaction term, add intercept)
@@ -11,7 +11,6 @@
 #' @return dU/dx in the gradient of sensitivity function d(x, Xi)
 #' @export
 #'
-
 
 
 dprime_func_self <- function(xi, bvec, h.func, h.prime, inv.F.mat, Ux, link="continuation",k.continuous){
@@ -76,7 +75,8 @@ dprime_func_self <- function(xi, bvec, h.func, h.prime, inv.F.mat, Ux, link="con
   #step2: matrix du/dpi
   du_dpi = rep(NA, J*J*J)
   dim(du_dpi) = c(J, J, J)
-  du_dpi[,J,] = matrix(0,nrow=J, ncol=J)
+  du_dpi[,J,]=0
+  #du_dpi[,J,] = matrix(0,nrow=J, ncol=J)
   #define du_dpi
 
   for(s in 1:(J-1)){

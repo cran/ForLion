@@ -7,35 +7,99 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
+```{r, include=FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
 ```
 
-**Reference Manuscript**: Huang, Y., Li, K., Mandal, A. et al. ForLion: a new algorithm for D-optimal designs under general parametric statistical models with mixed factors. Stat Comput 34, 157 (2024). 
+```{css, echo=FALSE}
+.note-box {
+  border: 1px solid #ccc;
+  background: white;
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 5px;
+}
+```
 
-This package implements the Forlion algorithm on the problem of designing an experiment with both discrete and continuous factors. The ForLion algorithm searches for locally optimal approximate designs under the D-criterion. When the true parameters are unknown, we can generate the EW D-optimal designs. This features allow users to create efficient and robust experimental designs that account for parameter uncertainty. The algorithm performs an exhaustive search in a design space with mixed factors while keeping high efficiency and reducing the number of distinct experimental settings. We mainly focus on generalized linear models (GLMs) and multinomial logit models (MLMs). Furthermore, implementing approximate designs with continuous settings can be challenging in practical applications. To address this issue, our package includes an algorithm that converts approximate designs into exact designs. This approximate-to-exact design algorithm ensures that the resulting exact design remains highly efficient while being more feasible for practical implementation.
+# Table of Contents
+
+- [Introduction](#intro)
+  - [Locally D-optimality and ForLion algorithm](#ForLion)
+  - [EW D-optimality and EW ForLion algorithm](#EW_ForLion)
+- [Applications mixed factor experiments](#Applications)
+  - [GLM Example: electrostatic discharge (ESD) experiment](#example_GLM)
+  - [MLM Example: minimizing surface defects experiment](#example_MLM)
+- [References](#References)
+
+# Introduction
+<a id="intro"></a>
+
+This package implements the ForLion algorithm and EW ForLion on the problem of designing an experiment with both discrete and continuous factors. The ForLion algorithm searches for locally optimal approximate designs under the D-criterion. When the true parameters are unknown, we can generate the EW D-optimal designs through EW ForLion algorithm. This features allow users to create efficient and robust experimental designs that account for parameter uncertainty. The algorithm performs an exhaustive search in a design space with mixed factors while keeping high efficiency and reducing the number of distinct experimental settings. 
+
+We mainly focus on generalized linear models (GLMs) and multinomial logit models (MLMs). Furthermore, implementing approximate designs with continuous settings can be challenging in practical applications. To address this issue, our package includes a rounding algorithm that converts the continuous factor values to a feasible experimental value based on pre-defined grid levels, and transforms the approximate designs into exact designs. This approximate-to-exact design algorithm ensures that the resulting exact design remains highly efficient while being more feasible for practical implementation.
+
+The package could be loaded through:
 
 ```{r setup}
 library(ForLion)
 library(psych)
 ```
 
+## Locally D-optimality and ForLion algorithm
+<a id="ForLion"></a>
 
-### GLM Example
+When the true parameter values $\boldsymbol \theta$ are known, the locally D-optiaml design is obtained by finding the design $\boldsymbol \xi = \{(\mathbf x_i, w_i), i = 1,\dots,m\}$ that maximizes
+$$ f_{locally}(\boldsymbol \xi)=\left| \mathbf F(\boldsymbol \xi, \boldsymbol \theta)\right|.$$
+The theoretical details of the ForLion algorithm are presented in reference [1].
+
+## EW D-optimality and EW ForLion algorithm
+<a id="EW_ForLion"></a>
+
+However, in practice, the true parameters estimate $\boldsymbol \theta$ are not always accurate. When the true parameter values are unknown, traditional optimal designs may perform poorly if the assumed parameter estimates are inaccurate. So, when $\boldsymbol{\theta}$ is unknown but a prior distribution or measure $Q(d\boldsymbol{\theta})$ on $\boldsymbol{\Theta}$ is available, we apply the EW D-optimality and look for $\boldsymbol{\xi}$ maximizing 
+
+$$
+f_{\rm EW}(\boldsymbol{\xi}) = |E\{{\mathbf F}(\boldsymbol{\xi}, \boldsymbol{\Theta})\}| = \left| \sum_{i=1}^m w_i E\left\{ {\mathbf F}({\mathbf x}_i, \boldsymbol{\Theta})\right\} \right|.
+$$
+We provided two approaches to compute the expected information matrix. The first is referred to as an integral-based EW D-optimal approximate design, in which 
+
+$$
+E\left\{ {\mathbf F}({\mathbf x}_i, \boldsymbol{\Theta})\right\} = \int_{\boldsymbol{\Theta}} {\mathbf F}({\mathbf x}_i, \boldsymbol{\theta}) Q(d\boldsymbol{\theta}).
+$$ 
+
+Alternatively, if a dataset from prior studies or pilot studies is available, we may bootstrap this dataset, fit the parametric model to each bootstrapped sample to obtain parameter estimates $\hat{\boldsymbol{\theta}}_j$, $j=1, \ldots, B$. We then seek $\boldsymbol{\xi}$, which maximizes 
+
+$$
+f_{\rm SEW}(\boldsymbol{\xi}) = |\hat{E}\{{\mathbf F}(\boldsymbol{\xi}, \boldsymbol{\Theta})\}| = \left| \sum_{i=1}^m w_i \hat{E}\left\{ {\mathbf F}({\mathbf x}_i, \boldsymbol{\Theta})\right\} \right|.
+$$ 
+Hence, we obtain a sample-based EW D-optimal approximate design, where 
+
+$$
+\hat{E}\left\{ {\mathbf F}({\mathbf x}_i, \boldsymbol{\Theta})\right\} = \frac{1}{B} \sum_{j=1}^B {\mathbf F}({\mathbf x}_i, \hat{\boldsymbol{\theta}}_j)
+$$
+For a detailed description of the EW ForLion algorithm, see reference [2].
+
+# Applications in mixed factor experiments
+<a id="Applications"></a>
+
+Through two case studies (GLM and MLM frameworks), we illustrate \pkg{ForLion}'s implementation for finding both D-optimal designs and EW D-optimal designs in experimental settings.
+
+## GLM Example
+<a id="example_GLM"></a>
 
 This is an example of electrostatic discharge (ESD) experiment in Section 4 of the reference manuscript. 
 
 Lukemire et al. (2019) reconsidered the electrostatic discharge (ESD) experiment described by Whitman et al. (2006) with a binary response and five mixed factors. The first four factors LotA, LotB, ESD, Pulse take values in $\{-1,1\}$, and the fifth factor Voltage $\in [25, 45]$ is continuous.
 
-The logistic regression model is: 
+The logistic regression model is:
 
 $\text{logit}(\mu)=\beta_0+\beta_1\text{LotA}+\beta_2\text{LotB}+\beta_3\text{ESD}+\beta_4\text{Pulse}+\beta_5\text{Voltage}+\beta_{34}(\text{ESD}\times\text{Pulse})$
 
-
 The parameter values: $\boldsymbol \beta = (\beta_0, \beta_1, \beta_2, \beta_3, \beta_4, \beta_5, \beta_{34})=(-7.5, 1.50,-0.2,-0.15,0.25,0.35,0.4)$
+
+### Locally D-optimal approximate design
 
 ```{r}
 hfunc.temp = function(y) {c(y,y[4]*y[5],1);};   # y -> h(y)=(y1,y2,y3,y4,y5,y4*y5,1)
@@ -48,22 +112,112 @@ beta.value = c(0.35,1.50,-0.2,-0.15,0.25,0.4,-7.5)       # continuous first and 
 Then, we use the *ForLion_GLM_Optimal()* function in ForLion package to search for the D-optimal design
 
 ```{r}
-ForLion_GLM_Optimal(n.factor=n.factor.temp, factor.level=factor.level.temp, hfunc=hfunc.temp,bvec=beta.value,link=link.temp,reltol=1e-8, rel.diff=0.03, maxit=500, random=FALSE, logscale=TRUE)
+set.seed(482)
+forlion.glm=ForLion_GLM_Optimal(n.factor=n.factor.temp,factor.level=factor.level.temp, hfunc=hfunc.temp,bvec=beta.value,link=link.temp,reltol=1e-8, rel.diff=0.03, maxit=500, random=FALSE, logscale=TRUE)
+
+forlion.glm
 ```
 
-### MLM Example
+The output have these key components:
+
+-   $m$: number of design points
+
+-   $Design Point$: matrix with rows indicating design point
+
+-   $Allocation$: D-optimal approximate allocation
+
+-   $det$: Optimal determinant of Fisher information matrix
+
+-   $convergence$: TRUE or FALSE, whether converge
+
+-   $min.diff$: the minimum Euclidean distance between design points
+
+-   $x.close$: a pair of design points with minimum distance
+
+-   $itmax$: iteration of the algorithm
+
+### Locally D-optimal exact design
+
+In our ESD experiment with a single continuous variable, the process yielded theoretical design points with continuous values, such as 25.1062 and 26.0956. As these values are not practically feasible, we must generate an exact allocation. This is achieved by using function *GLM_Exact_Design()* to convert the continuous values into a feasible value set of discrete points and to transform the approximate allocation into an exact allocation. We assume that the total number of observations is equal to $N=500$ and use the rounding level of $L=0.1$ for the continuous variable `Voltage`.
+
+```{r}
+GLM_Exact_Design(k.continuous=1, design_x=forlion.glm$x.factor, design_p=forlion.glm$p,
+det.design=forlion.glm$det,p=7, ForLion=TRUE, bvec=beta.value, rel.diff=0.5,L=0.1,N=500, hfunc=hfunc.temp, link="logit")
+```
+
+In here:
+
+-   $ni.design$: exact allocation
+
+-   $rel.efficiency$: relative efficiency of the Exact and Approximate Designs
+
+### EW D-optimal approximate design
+
+When the true parameter values of an experiment are unknown but their prior distribution is known, in here we show how to use the function *EW_ForLion_GLM_Optimal()* to find the sample-based EW D-aptimal approximate design. In this experiment, we assume that each element of $\boldsymbol \theta$ has the following independent prior distributions:
+
+$$
+\beta_0 \sim U(-8,-7),\quad \beta_1 \sim U(1,2), \quad \beta_2 \sim U(-0.3,-0.1), \quad  \beta_3 \sim U(-0.3,0) \\
+\beta_4 \sim U(0.1,0.4) , \quad \beta_5 \sim U(0.25, 0.45),\quad \beta_{34} \sim U(0.35,0.45)
+$$ 
+
+We firstly random sample $B=200$ parameter vectors from the previously defined prior distributions.
+
+```{r}
+nrun = 200
+set.seed(0713)
+b_0 = runif(nrun, -8, -7)
+b_1 = runif(nrun, 1, 2)
+b_2 = runif(nrun, -0.3, -0.1)
+b_3 = runif(nrun, -0.3, 0)
+b_4 = runif(nrun, 0.1, 0.4)
+b_5 = runif(nrun, 0.25, 0.45)
+b_34= runif(nrun, 0.35, 0.45)
+beta.matrix = cbind(b_5,b_1,b_2,b_3,b_4,b_34,b_0)
+```
+
+Then, we utilize the *EW_ForLion_GLM_Optimal()* function in ForLion package to search for the EW D-optimal approximate design
+
+```{r}
+set.seed(482)
+EW_ForLion_GLM_Optimal(n.factor=c(0, 2, 2, 2, 2), factor.level=list(c(25,45),c(-1,1),c(-1,1),c(-1,1),c(-1,1)), hfunc=hfunc.temp, Integral_based=FALSE, b_matrix=beta.matrix, link="logit", reltol=1e-8, rel.diff=5e-3, optim_grad=TRUE, maxit=500, random=FALSE,nram=1,logscale=TRUE)
+```
+
+The output have these key components:
+
+-   $m$: number of design points
+
+-   $Design Point$: matrix with rows indicating design point
+
+-   $Allocation$: the reported EW D-optimal approximate allocation
+
+-   $det$: Optimal determinant of the expected Fisher information matrix
+
+-   $convergence$: TRUE or FALSE, whether converge
+
+-   $min.diff$: the minimum Euclidean distance between design points
+
+-   $x.close$: a pair of design points with minimum distance
+
+-   $itmax$: iteration of the algorithm
+
+## MLM Example
+<a id="example_MLM"></a>
 
 This is an example of minimizing surface defects experiment, which is example in S.3 in the supplementary material of the reference manuscript. 
 
-A polysilicon deposition process for manufacturing very large-scale integrated (VLSI) circuits was described with six control factors, namely, Cleaning Method, Deposition temperature ($^\circ$C), Deposition pressure (mtorr), Nitrogen flow rate (seem), Silane flow rate (seem), and Settling time (minutes). Wu (2008) used the relevant experiment as an illustrative example and categorized the response Surface Defects from a count number to one of the five ordered categories, namely, Practically no surface defects (I, $0\sim 3$), Very few defects (II, $4\sim 30$), Some defects (III, $31\sim 300$), Many defects (IV, $301\sim 1000$), and Too many defects (V, $1001$ and above). 
+A polysilicon deposition process for manufacturing very large-scale integrated (VLSI) circuits was described with six control factors, namely, Cleaning Method, Deposition temperature ($^\circ$C), Deposition pressure (mtorr), Nitrogen flow rate (seem), Silane flow rate (seem), and Settling time (minutes). Wu (2008) used the relevant experiment as an illustrative example and categorized the response Surface Defects from a count number to one of the five ordered categories, namely, Practically no surface defects (I, $0\sim 3$), Very few defects (II, $4\sim 30$), Some defects (III, $31\sim 300$), Many defects (IV, $301\sim 1000$), and Too many defects (V, $1001$ and above).
 
-The example uses cumulative proportional odds model. 
+The example uses cumulative proportional odds model.
 
 $\log\left(\frac{\pi_{i1}+\cdots+\pi_{ij}}{\pi_{i,j+1}+\cdots+\pi_{iJ}}\right)=\theta_{j} - \beta_1 x_{i1} - \beta_2 x_{i2} - \beta_3 x_{i3}\nonumber - \beta_4 x_{i4} - \beta_5 x_{i5} - \beta_6 x_{i6}$
 
 with $i=1, \ldots, m$ and $j=1, 2, 3, 4$ and $\boldsymbol \theta = (\theta_1, \theta_2, \theta_3, \theta_4, \beta_1, \beta_2, \beta_3, \beta_4, \beta_5, \beta_6)=(-1.77994301, -0.05287782,  1.86852211, 2.76330779,$ $ -0.94437464, 0.18504420,  -0.01638597, -0.03543202, -0.07060306, 0.10347917)$. 
 
+
+### Locally D-optimal approximate design
+
 **Note: Always put continuous factors ahead of discrete factors, pay attention to the order of coefficients pairing with predictors**
+
 ```{r}
 link.temp = "cumulative"
 ## Note: Always put continuous factors ahead of discrete factors, pay attention to the order of coefficients paring with predictors
@@ -88,6 +242,61 @@ b.temp = c(-1.77994301, -0.05287782,  1.86852211, 2.76330779, -0.94437464, 0.185
 Then, we can use *ForLion_MLM_Optimal()* function in ForLion package to search for the D-optimal design
 
 ```{r}
-ForLion_MLM_Optimal(J=J, n.factor=n.factor.temp, factor.level=factor.level.temp, hfunc=hfunc.temp, h.prime=hprime.temp, bvec=b.temp, link=link.temp, Fi.func=Fi_MLM_func, delta=1e-2, epsilon=1e-12, reltol=1e-10, rel.diff=5e-4, maxit=500, optim_grad=FALSE)
+set.seed(123)
+ForLion_MLM_Optimal(J=J, n.factor=n.factor.temp, factor.level=factor.level.temp, hfunc=hfunc.temp, h.prime=hprime.temp, bvec=b.temp, link=link.temp, Fi.func=Fi_MLM_func, delta=1e-2, epsilon=1e-10, reltol=1e-8, rel.diff=0.5, maxit=500, optim_grad=FALSE)
 ```
+
+### EW D-optimal approximate design
+
+In this minimizing surface defects experiment, we have following independent prior distributions: 
+
+$$
+\beta_1 \sim U(-1,0),\quad \beta_2 \sim U(0,0.2), \quad \beta_3 \sim U(-0.1,0.1), \quad  \beta_4 \sim U(-0.1,0.1), \quad \beta_5 \sim U(-0.1,0.1) ,\\
+\beta_6 \sim U(0, 0.2), \quad \theta_1 \sim U(-2, -1),\quad \theta_2 \sim U(-0.5,0.5), \quad \theta_3 \sim U(1,2), \quad \theta_4 \sim U(2.5, 3.5)
+$$ 
+
+To construct a robust design against parameter misspecifications, we sample $B=100$ parameter vectors from the prior distributions
+
+```{r}
+nrun = 100
+set.seed(0713)
+b_clean = runif(nrun, -1, 0)
+b_temperature = runif(nrun, 0, 0.2)
+b_pressure = runif(nrun, -0.1, 0.1)
+b_nitrogen = runif(nrun, -0.1, 0.1)
+b_silane = runif(nrun, -0.1, 0.1)
+b_time = runif(nrun, 0, 0.2)
+theta1 = runif(nrun, -2, -1)
+theta2 = runif(nrun, -0.5, 0.5)
+theta3 = runif(nrun, 1, 2)
+theta4 = runif(nrun, 2.5, 3.5)
+
+beta.temp2 = cbind(theta1, theta2, theta3, theta4, b_clean, b_temperature, b_pressure, b_nitrogen, b_silane, b_time)
+```
+
+Then, we can use *EW_ForLion_MLM_Optimal()* function to find the sampled-based EW D-optimal approximate design
+
+```{r}
+set.seed(123)
+EW_forlion.MLM =EW_ForLion_MLM_Optimal(J=J, n.factor=n.factor.temp,
+factor.level=factor.level.temp,hfunc=hfunc.temp, h.prime=hprime.temp, bvec_matrix=beta.temp2, link=link.temp, EW_Fi.func=EW_Fi_MLM_func, 
+delta=1e-2, epsilon=1e-10, reltol=1e-8, rel.diff=0.5, maxit=500, optim_grad=FALSE)
+
+EW_forlion.MLM 
+```
+
+### EW D-optimal exact design
+
+Based on the obtained sample-based EW D-optimal approximate design. Assuming that the total number of experimental units is $n=1000$, we apply *MLM_Exact_Design()* with $L =c(0.5,0.1,0.1,0.1,1)$ for continuous control variables and obtain an exact design
+
+```{r}
+MLM_Exact_Design(J=J, k.continuous=5,design_x=EW_forlion.MLM$x.factor,design_p=EW_forlion.MLM$p,det.design=EW_forlion.MLM$det,p=10,ForLion=FALSE,bvec_matrix=beta.temp2,rel.diff=1,L=c(0.5,0.1,0.1,0.1,1),N=1000,hfunc=hfunc.temp,link=link.temp)
+```
+
+# References: 
+<a id="References"></a>
+
+[1] Huang, Y., Li, K., Mandal, A. et al. ForLion: a new algorithm for D-optimal designs under general parametric statistical models with mixed factors. Stat Comput 34, 157 (2024).
+
+[2] Lin, S., Huang, Y. and Yang, J., 2025. EW D-optimal Designs for Experiments with Mixed Factors. arXiv preprint arXiv:2505.00629.
 

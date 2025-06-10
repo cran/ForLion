@@ -8,11 +8,11 @@
 #' @param nram When random == TRUE, the function will generate nram number of initial points, default is 3
 #' @param p00 Specified initial design approximate allocation; default to be NULL, this will generate a random initial design
 #'
-#' @return p  EW D-optimal approximate allocation
-#' @return p0 Initial approximate allocation that derived the reported EW D-optimal approximate allocation
-#' @return Maximum The maximum of the determinant of the Fisher information matrix of the reported EW D-optimal design
-#' @return convergence Convergence TRUE or FALSE
-#' @return itmax number of the iteration
+#' @return p               EW D-optimal approximate allocation
+#' @return p0              Initial approximate allocation that derived the reported EW D-optimal approximate allocation
+#' @return Maximum         The maximum of the determinant of the expected Fisher information matrix of the reported EW D-optimal design
+#' @return convergence     Convergence TRUE or FALSE
+#' @return itmax           number of the iteration
 #' @export
 #'
 #' @examples
@@ -37,8 +37,9 @@
 #' Xmat.temp=matrix(0, m.temp, p.temp)
 #' EW_wvec.temp=rep(0, m.temp)
 #' for(i in 1:m.temp) {
-#' htemp=EW_Xw_maineffects_self(x=x.temp[i,],joint_Func_b=gjoint_b, Lowerbounds=paras_lowerbound,
-#'                              Upperbounds=paras_upperbound, link=link.temp, h.func=hfunc.temp);
+#' htemp=EW_Xw_maineffects_self(x=x.temp[i,],Integral_based=TRUE,joint_Func_b=gjoint_b,
+#' Lowerbounds=paras_lowerbound,Upperbounds=paras_upperbound, link=link.temp,
+#'  h.func=hfunc.temp);
 #' Xmat.temp[i,]=htemp$X;
 #' EW_wvec.temp[i]=htemp$E_w;
 #' }

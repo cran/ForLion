@@ -2,7 +2,7 @@
 % Please edit documentation in R/Fi_MLM_func.R
 \name{Fi_MLM_func}
 \alias{Fi_MLM_func}
-\title{Function to generate fisher information at one design point xi for multinomial logit models}
+\title{function to generate fisher information at one design point xi for multinomial logit models}
 \usage{
 Fi_MLM_func(X_x, bvec, link = "continuation")
 }
@@ -14,12 +14,12 @@ Fi_MLM_func(X_x, bvec, link = "continuation")
 \item{link}{multinomial logit model link function name "baseline", "cumulative", "adjacent", or"continuation", default to be "continuation"}
 }
 \value{
-F_x Fisher information matrix at x_i
+F_x    Fisher information matrix at x_i
 
-U_x U matrix for calculation of Fisher information matrix at x_i (see Corollary 3.1 in Bu, Majumdar, Yang(2020))
+U_x    U matrix for calculation of Fisher information matrix at x_i (see Corollary 3.1 in Bu, Majumdar, Yang(2020))
 }
 \description{
-Function to generate fisher information at one design point xi for multinomial logit models
+function to generate fisher information at one design point xi for multinomial logit models
 }
 \examples{
 # Reference minimizing surface example in supplementary material

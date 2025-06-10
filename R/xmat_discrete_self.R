@@ -1,6 +1,6 @@
-#' Generate GLM random initial designs within ForLion algorithm
+#' Generate initial designs within ForLion algorithms
 #'
-#' @param xlist a list of factor levels within ForLion algorithm, for example, a binary factor might be c(-1,1), a continuous factor within range of (25,45) will be c(25, 45).
+#' @param xlist a list of factor levels within ForLion algorithms, for example, a binary factor might be c(-1,1), a continuous factor within range of (25,45) will be c(25, 45).
 #' @param rowmax maximum number of rows of the design matrix
 #'
 #' @return design matrix of all possible combinations of discrete factors levels with min and max of the continuous factors.

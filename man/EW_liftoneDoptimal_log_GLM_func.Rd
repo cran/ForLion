@@ -30,15 +30,15 @@ EW_liftoneDoptimal_log_GLM_func(
 \item{p00}{Specified initial design approximate allocation; default to be NULL, this will generate a random initial design}
 }
 \value{
-p  EW D-optimal approximate allocation
+p             EW D-optimal approximate allocation
 
-p0 Initial approximate allocation that derived the reported EW D-optimal approximate allocation
+p0            Initial approximate allocation that derived the reported EW D-optimal approximate allocation
 
-Maximum The maximum of the determinant of the Fisher information matrix of the reported EW D-optimal design
+Maximum       The maximum of the determinant of the Fisher information matrix of the reported EW D-optimal design
 
-convergence Convergence TRUE or FALSE
+convergence   Convergence TRUE or FALSE
 
-itmax number of the iteration
+itmax         number of the iteration
 }
 \description{
 EW Lift-one algorithm for D-optimal approximate design in log scale
@@ -66,8 +66,9 @@ p.temp=length(paras_upperbound)    # number of predictors
 Xmat.temp=matrix(0, m.temp, p.temp)
 EW_wvec.temp=rep(0, m.temp)
 for(i in 1:m.temp) {
-htemp=EW_Xw_maineffects_self(x=x.temp[i,],joint_Func_b=gjoint_b, Lowerbounds=paras_lowerbound,
-                             Upperbounds=paras_upperbound, link=link.temp, h.func=hfunc.temp);
+htemp=EW_Xw_maineffects_self(x=x.temp[i,],Integral_based=TRUE,joint_Func_b=gjoint_b,
+Lowerbounds=paras_lowerbound, Upperbounds=paras_upperbound, link=link.temp,
+h.func=hfunc.temp);
 Xmat.temp[i,]=htemp$X;
 EW_wvec.temp[i]=htemp$E_w;
 }

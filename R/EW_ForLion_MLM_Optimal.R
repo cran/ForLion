@@ -1,18 +1,16 @@
-## self-defined function to find D-optimal design for multinomial models with mixed factors
-## version: 09/17/2022
-## factors may include discrete factors with finite number of distinct levels and
-##                     continuous factors with specified interval range (min, max)
-## continuous factors, if any, must serve as main-effects only
-## allowing merging points that are close enough
-## Reference: Mixed factor paper, Section 3
 #' EW ForLion function for multinomial logit models
-#'
+#' @description
+#' Function for EW ForLion algorithm to find EW D-optimal design under multinomial logit models with mixed factors.
+#' Reference Section 3 of Lin, Huang, Yang (2025).
+#' Factors may include discrete factors with finite number of distinct levels and continuous factors with specified interval range (min, max), continuous factors, if any, must serve as main-effects only, allowing merging points that are close enough.
+#' Continuous factors first then discrete factors, model parameters should in the same order of factors.
 #' @param J number of response levels in the multinomial logit model
 #' @param n.factor vector of numbers of distinct levels, "0" indicates continuous factors, "0"s always come first, "2" or above indicates discrete factor, "1" is not allowed
 #' @param factor.level list of distinct levels, (min, max) for continuous factor, continuous factors first, should be the same order as n.factor
+#' @param xlist_fix the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables
 #' @param hfunc function for obtaining model matrix h(y) for given design point y, y has to follow the same order as n.factor
 #' @param h.prime function to obtain dX/dx
-#' @param bvec_matrix the matrix of the bootstrap parameter values of beta
+#' @param bvec_matrix the matrix of the sampled parameter values of beta
 #' @param link link function, default "continuation", other choices "baseline", "cumulative", and "adjacent"
 #' @param EW_Fi.func function to calculate row-wise Expectation of Fisher information Fi, default is EW_Fi_MLM_func
 #' @param delta tuning parameter, the generated design pints distance threshold, || x_i(0) - x_j(0) || >= delta, default 1e-5
@@ -20,22 +18,22 @@
 #' @param reltol the relative convergence tolerance, default value 1e-5
 #' @param rel.diff points with distance less than that will be merged, default value 0
 #' @param maxit the maximum number of iterations, default value 100
-#' @param random TRUE or FALSE, if TRUE then the function will run EW lift-one with additional "nram" number of random approximate allocation, default to be FALSE
-#' @param nram when random == TRUE, the function will run EW lift-one nram number of initial proportion p00, default is 3
+#' @param random TRUE or FALSE, if TRUE then the function will run lift-one with additional "nram" number of random approximate allocation, default to be FALSE
+#' @param nram when random == TRUE, the function will run lift-one nram number of initial proportion p00, default is 3
 #' @param rowmax maximum number of points in the initial design, default NULL indicates no restriction
 #' @param Xini initial list of design points, default NULL will generate random initial design points
 #' @param random.initial TRUE or FALSE, if TRUE then the function will run EW ForLion with additional "nram.initial" number of random initial design points, default FALSE
 #' @param nram.initial when random.initial == TRUE, the function will run EW ForLion algorithm with nram.initial number of initial design points Xini, default is 3
 #' @param optim_grad TRUE or FALSE, default is FALSE, whether to use the analytical gradient function or numerical gradient for searching optimal new design point
 #'
-#' @return m the number of design points
-#' @return x.factor matrix of experimental factors with rows indicating design point
-#' @return p the reported EW D-optimal approximate allocation
-#' @return det the determinant of the maximum Expectation of Fisher information
+#' @return m           the number of design points
+#' @return x.factor    matrix of experimental factors with rows indicating design point
+#' @return p           the reported EW D-optimal approximate allocation
+#' @return det         the determinant of the maximum Expectation of Fisher information
 #' @return convergence TRUE or FALSE, whether converge
-#' @return min.diff the minimum Euclidean distance between design points
-#' @return x.close  pair of design points with minimum distance
-#' @return itmax iteration of the algorithm
+#' @return min.diff    the minimum Euclidean distance between design points
+#' @return x.close     pair of design points with minimum distance
+#' @return itmax       iteration of the algorithm
 #' @export
 #'
 #' @examples
@@ -46,48 +44,27 @@
 #' } #hfunc is a 3*5 matrix, transfer x design matrix to model matrix for emergence of flies example
 #'
 #' hprime.temp = function(y){
-#' matrix(data=c(0, 1, 2*y, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0), nrow=3, ncol=5, byrow=TRUE)
+#' list(matrix_1 =matrix(data=c(0, 1, 2*y, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0),
+#'     nrow=3, ncol=5, byrow=TRUE))
 #' }
 #'
 #' link.temp = "continuation"
 #' n.factor.temp = c(0)  # 1 continuous factor no discrete factor in EW ForLion
-#' factor.level.temp = list(c(80,200)) #boundary for continuous parameter in Forlion
+#' factor.level.temp = list(c(80,200)) #boundary for continuous parameter in EW Forlion
 #' bvec_bootstrap<-matrix(c(-0.2401, -1.9292, -2.7851, -1.614,-1.162,
 #'                          -0.0535, -0.0274, -0.0096,-0.0291, -0.04,
 #'                           0.0004,  0.0003,  0.0002,  0.0003,  0.1,
 #'                          -9.2154, -9.7576, -9.6818, -8.5139, -8.56),nrow=4,byrow=TRUE)
 #' EW_ForLion_MLM_Optimal(J=J, n.factor=n.factor.temp, factor.level=factor.level.temp,
-#'          hfunc=hfunc.temp,h.prime=h.prime.temp, bvec_matrix=bvec_bootstrap,rel.diff=1,
-#'          link=link.temp, optim_grad=FALSE)
+#'          xlist_fix=NULL, hfunc=hfunc.temp,h.prime=h.prime.temp, bvec_matrix=bvec_bootstrap,
+#'          rel.diff=1, link=link.temp, optim_grad=FALSE)
 #'
 
-EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bvec_matrix, link="continuation", EW_Fi.func=EW_Fi_MLM_func, delta=1e-5, epsilon=1e-12, reltol=1e-5, rel.diff=0, maxit=100, random=FALSE, nram=3, rowmax=NULL, Xini=NULL, random.initial=FALSE, nram.initial=3, optim_grad=FALSE) {
-  # input: n.factor -- vector of numbers of distinct levels, "0" indicates continuous factors, "0"s always come first, "2" or above indicates discrete factor, "1" is not allowed
-  #        factor.level -- list of distinct levels, (min, max) for continuous factor
-  #        hfunc -- function for obtaining h(y) for given y, y has to follow the same order as n.factor
-  #        h.prime -- function to obtain dX/dx
-  #        bvec -- assumed parameter values of beta, same length of h(y)
-  #        link -- link function, default "logit"
-  #        Fi.func -- function to calculate rowwise Fisher information Fi (used in random initial points)
-  #        delta: tuning parameter, the distance threshold, || x_i(0) - x_j(0) || >= delta
-  #        epsilon: default 1e-12, for determining f.det > 0 numerically, f.det <= epsilon will be considered as f.det <= 0
-  #        rel.diff -- points with distance less than that will be merged, default value 0
-  #        random -- TRUE or FALSE, TRUE indicates try random points finding each y_1^*
-  #        nram -- default is 3, try 3 random points for finding best y_1^*
-  #        rowmax -- maximum number of points in the initial design, default NULL indicates no restriction
-  #        Xini -- initial list of design points, m*d, default NULL
-  #        random.initial -- TRUE or FALSE, TRUE indicates try random initial points x_i^0
-  #        nram.initial -- default 3, try 3 random points for x_i^0
-  #        optim_grad -- default TRUE, whether to use gradient in optim() function, option: TRUE / FALSE
-  # output:m -- number of design points
-  #        x.factor [m*d.factor] -- matrix with rows indicating design point
-  #        p [m*1] -- D-optimal allocation
-  #        det -- Optimal |X'WX|
-  #        x.model [m*p.factor] -- model matrix X
-  #        w [m*1] -- vector of w such that W=diag(p*w)
-  #        convergence -- TRUE or FALSE
-  #        min.diff -- the minimum Euclidean distance between design points
-  #        x.close -- a pair of design points with minimum distance
+
+
+
+
+EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfunc, h.prime, bvec_matrix, link="continuation", EW_Fi.func=EW_Fi_MLM_func, delta=1e-5, epsilon=1e-12, reltol=1e-5, rel.diff=0, maxit=100, random=FALSE, nram=3, rowmax=NULL, Xini=NULL, random.initial=FALSE, nram.initial=3, optim_grad=FALSE) {
   d.factor=length(n.factor);             # number of factors
   p.factor=dim(bvec_matrix)[2];                 # number of predictors
   k.continuous=sum(n.factor==0);         # number of continuous factors
@@ -106,7 +83,7 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
 
     p0= rep(1/m.design, m.design)
     p0 = p0/sum(p0)
-    optemp=EW_liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J, thetavec_matrix=bvec_matrix, link=link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram);
+    optemp=EW_liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J=J, thetavec_matrix=bvec_matrix, link=link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram);
 
     m.design.ans=m.design=sum(optemp$p>0);       # updated number of design point
     x.factor.ans=x.design=xtemp[optemp$p>0,];  # updated list of design points
@@ -121,7 +98,7 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
   if(k.continuous==d.factor) {
     lvec=uvec=rep(0, d.factor);     # lower bounds and upper bounds for continuous factors
     for(i in 1:d.factor) {lvec[i]=min(factor.level[[i]]); uvec[i]=max(factor.level[[i]]);};
-    if(is.null(Xini)){initial.temp=EW_design_initial_self(k.continuous=k.continuous, factor.level=factor.level, lvec=lvec, uvec=uvec, bvec_matrix=bvec_matrix, link=link, h.func=hfunc, EW_Fi.func=EW_Fi.func, delta=delta, epsilon = epsilon, maxit=maxit); xtemp=initial.temp$X; p0=initial.temp$p0} else {xtemp=Xini; p0=NULL}  #no initial design
+    if(is.null(Xini)){initial.temp=EW_design_initial_MLM(k.continuous=k.continuous, factor.level=factor.level, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec_matrix=bvec_matrix, link=link, h.func=hfunc, EW_Fi.func=EW_Fi.func, delta=delta, epsilon = epsilon, maxit=maxit); xtemp=initial.temp$X; p0=initial.temp$p0} else {xtemp=Xini; p0=NULL}  #no initial design
     if(k.continuous==1) m.design=length(xtemp) else m.design=nrow(xtemp);                   # initial number of design points
     X.mat = rep(0,J*p.factor*m.design);
     dim(X.mat)=c(J, p.factor, m.design)  # initial model matrix X
@@ -132,38 +109,38 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
 
     if(is.null(p0)){p0 = rep(1/m.design, m.design)}
 
-    optemp=EW_liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J, thetavec_matrix=bvec_matrix, link = link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram)
+    optemp=EW_liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J=J, thetavec_matrix=bvec_matrix, link = link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram)
     # new point step (for each idiscrete, give d and partial d function, use optim to find max d compare to p)
     m.design=sum(optemp$p>0);       # updated number of design point ##deleting w_i = 0
     if(k.continuous==1){x.design=xtemp[optemp$p>0]}else{x.design=xtemp[optemp$p>0,];}  # updated list of design points
     p.design=optemp$p[optemp$p>0];  # optimal allocation on current design points
-    det.design=optemp$Maximum;      # optimized |X'UX|
+    det.design=optemp$Maximum;      # optimized |X'E(U)X|
     X.mat = X.mat[, ,optemp$p>0];   # updated model matrix
 
-    #calculate F_Xi, Fisher information matrix for current design
+    #calculate E(F_Xi), the expectation of Fisher information matrix for current design
     F.mat = 0
     Fi = vector()
     for(i in 1:m.design){
-      new_Fi = EW_Fi.func(X.mat[, ,i], bvec_matrix, link)
+      new_Fi = EW_Fi.func(X.mat[, ,i], bvec_matrix=bvec_matrix, link=link)
       Fi = append(Fi, list(new_Fi$F_x))
       F.mat = F.mat + p.design[i]*new_Fi$F_x
     }
     inv.F.mat = solve(F.mat, tol=.Machine$double.xmin)
 
-    #calculate d(x, Xi) function
+    #calculate E(d(x, Xi)) function
     hfunc1 <- function(y) { hfunc(c(y)); };
     d_x_Xi = function(y){
       hy=hfunc1(y)
-      F_newpoint = EW_Fi.func(hy, bvec_matrix, link)
+      F_newpoint = EW_Fi.func(hy, bvec_matrix=bvec_matrix, link=link)
       d=psych::tr(inv.F.mat %*% F_newpoint$F_x)
       d=as.numeric(d)
       return(-d)
     }
     grad_d = function(y){
       hy=hfunc1(y)
-      Fi_ans = EW_Fi.func(hy, bvec_matrix, link)
+      Fi_ans = EW_Fi.func(hy, bvec_matrix=bvec_matrix, link=link)
       EUx = Fi_ans$EU_x
-      dprime = EW_dprime_func_self(y, bvec_matrix, hfunc, h.prime, inv.F.mat, EUx, link=link,k.continuous)
+      dprime = EW_dprime_func_self(y, bvec_matrix=bvec_matrix, h.func=hfunc, h.prime=h.prime, inv.F.mat=inv.F.mat, EUx=EUx, link=link,k.continuous=k.continuous)
       return(-dprime)
     }
     x0=(lvec+uvec)/2;
@@ -211,16 +188,16 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
         i1=which.min(apply(dtemp,1,min)); # index of design point to be merged
         i2=which.min(dtemp[i1,]); # index of design point to be merged
         if(k.continuous==1){
-          ystar1=(x.design_old[i1]+x.design_old[i2])/2; # merged design point
+          ystar1=(p.design_old[i1]*x.design_old[i1]+p.design_old[i2]*x.design_old[i2])/(p.design_old[i1]+p.design_old[i2]); # merged design point
           x.design_mer=c(x.design_old[-c(i1,i2)], ystar1)
         }else{
-          ystar1=(x.design_old[i1,]+x.design_old[i2,])/2; # merged design point
+          ystar1=(p.design_old[i1]*x.design_old[i1,]+p.design_old[i2]*x.design_old[i2,])/(p.design_old[i1]+p.design_old[i2]); # merged design point
           x.design_mer=rbind(x.design_old[-c(i1,i2), ], ystar1) # update x.design
         }
         p.design_mer=c(p.design_old[-c(i1,i2)], p.design_old[i1]+p.design_old[i2])
         m.design_mer=m.design_old-1
 
-        # Build X.mat_mer and calculate the Fisher information matrix (F.mat_mer)
+        # Build X.mat_mer and calculate the expectation of Fisher information matrix (E(F.mat_mer))
         X.mat_mer = rep(0,J*p.factor*m.design_mer);
         dim(X.mat_mer)=c(J, p.factor, m.design_mer)  # initial model matrix X
         for(i in 1:m.design_mer){
@@ -228,11 +205,11 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
           X.mat_mer[,,i]=htemp_mer;
         };
 
-        #calculate F_Xi, Fisher information matrix for current design
+        #calculate E(F_Xi), the expectation of Fisher information matrix for current design
         F.mat_mer = 0
         Fi_mer = vector()
         for(i in 1:m.design_mer){
-          new_Fi_mer = EW_Fi.func(X.mat_mer[, ,i], bvec_matrix, link)
+          new_Fi_mer = EW_Fi.func(X.mat_mer[, ,i], bvec_matrix=bvec_matrix, link=link)
           Fi_mer = append(Fi_mer, list(new_Fi_mer$F_x))
           F.mat_mer = F.mat_mer + p.design_mer[i]*new_Fi_mer$F_x
         }
@@ -261,42 +238,42 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
         X.mat[,,i]=htemp;
       };
 
-      #Go back to step2:lift-one
-      optemp=EW_liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J, thetavec_matrix=bvec_matrix,link=link, reltol=reltol, maxit=maxit, p00=p.design, random=random, nram=nram)
+      #Go back to step3:lift-one
+      optemp=EW_liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J=J, thetavec_matrix=bvec_matrix,link=link, reltol=reltol, maxit=maxit, p00=p.design, random=random, nram=nram)
 
-      #step3:deleting step new point step
+      #step4:deleting step new point step
       m.design=sum(optemp$p>0);       # updated number of design point ##deleting w_i = 0
       x.design=if(k.continuous==1){x.design[optemp$p>0]}else{x.design[optemp$p>0,];}  # updated list of design points
       p.design=optemp$p[optemp$p>0];  # optimal allocation on current design points
-      det.design=optemp$Maximum;      # optimized |X'UX|
+      det.design=optemp$Maximum;      # optimized |X'E(U)X|
       X.mat = X.mat[, ,optemp$p>0];   # updated model matrix
 
-      #step4: new point step (for each idiscrete, give d and partial d function, use optim to find max d compare to p)
-      #calculate F_Xi, Fisher information matrix for current design
+      #step5: new point step (for each idiscrete, give d and partial d function, use optim to find max d compare to p)
+      #calculate E(F_Xi), the expectation of Fisher information matrix for current design
       F.mat = 0
       Fi = vector()
       for(i in 1:m.design){
-        new_Fi = EW_Fi.func(X.mat[, ,i], bvec_matrix, link)
+        new_Fi = EW_Fi.func(X.mat[, ,i], bvec_matrix=bvec_matrix, link=link)
         Fi = append(Fi, list(new_Fi$F_x))
         F.mat = F.mat + p.design[i]*new_Fi$F_x
       }
       inv.F.mat = solve(F.mat, tol=.Machine$double.xmin)
 
 
-      #calculate d(x, Xi) function
+      #calculate E(d(x, Xi)) function
       hfunc1 <- function(y) { hfunc(c(y)); };
       d_x_Xi = function(y){
         hy=hfunc1(y)
-        F_newpoint = EW_Fi.func(hy, bvec_matrix, link)
+        F_newpoint = EW_Fi.func(hy, bvec_matrix=bvec_matrix, link=link)
         d=psych::tr(inv.F.mat %*% F_newpoint$F_x)
         d=as.numeric(d)
         return(-d)
       }
       grad_d = function(y){
         hy=hfunc1(y)
-        Fi_ans = EW_Fi.func(hy, bvec_matrix, link)
+        Fi_ans = EW_Fi.func(hy, bvec_matrix=bvec_matrix, link=link)
         EUx = Fi_ans$EU_x
-        dprime = EW_dprime_func_self(y, bvec_matrix, hfunc, h.prime, inv.F.mat, EUx, link=link,k.continuous)
+        dprime = EW_dprime_func_self(y, bvec_matrix=bvec_matrix, h.func=hfunc, h.prime=h.prime, inv.F.mat=inv.F.mat, EUx=EUx, link=link,k.continuous=k.continuous)
         return(-dprime)
       }
       x0=(lvec+uvec)/2;
@@ -337,7 +314,7 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
     if(random.initial){
       for(num in 1:nram.initial){
         #try different initial points
-        initial.temp=EW_design_initial_self(k.continuous=k.continuous, factor.level=factor.level, lvec=lvec, uvec=uvec, bvec_matrix=bvec_matrix, link=link, h.func=hfunc, EW_Fi.func=EW_Fi.func, delta=delta, epsilon=epsilon, maxit=maxit); xtemp=initial.temp$X; p0=initial.temp$p0 #random initial design
+        initial.temp=EW_design_initial_MLM(k.continuous=k.continuous, factor.level=factor.level, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec_matrix=bvec_matrix, link=link, h.func=hfunc, EW_Fi.func=EW_Fi.func, delta=delta, epsilon=epsilon, maxit=maxit); xtemp=initial.temp$X; p0=initial.temp$p0 #random initial design
         if(k.continuous==1) m.design=length(xtemp) else m.design=nrow(xtemp);                   # initial number of design points
         X.mat = rep(0,J*p.factor*m.design);
         dim(X.mat)=c(J, p.factor, m.design)  # initial model matrix X
@@ -346,38 +323,38 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
           X.mat[,,i]=htemp;
         };
 
-        optemp=EW_liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J, thetavec_matrix=bvec_matrix, link=link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram)
+        optemp=EW_liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J=J, thetavec_matrix=bvec_matrix, link=link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram)
         # new point step (for each idiscrete, give d and partial d function, use optim to find max d compare to p)
         m.design=sum(optemp$p>0);       # updated number of design point ##deleting w_i = 0
         if(k.continuous==1){x.design=xtemp[optemp$p>0]}else{x.design=xtemp[optemp$p>0,];}  # updated list of design points
         p.design=optemp$p[optemp$p>0];  # optimal allocation on current design points
-        det.design=optemp$Maximum;      # optimized |X'UX|
+        det.design=optemp$Maximum;      # optimized |X'E(U)X|
         X.mat = X.mat[, ,optemp$p>0];   # updated model matrix
 
-        #calculate F_Xi, Fisher information matrix for current design
+        #calculate E(F_Xi), the expectation of Fisher information matrix for current design
         F.mat = 0
         Fi = vector()
         for(i in 1:m.design){
-          new_Fi = EW_Fi.func(X.mat[, ,i], bvec_matrix, link)
+          new_Fi = EW_Fi.func(X.mat[, ,i], bvec_matrix=bvec_matrix, link=link)
           Fi = append(Fi, list(new_Fi$F_x))
           F.mat = F.mat + p.design[i]*new_Fi$F_x
         }
         inv.F.mat = solve(F.mat, tol=.Machine$double.xmin)
 
-        #calculate d(x, Xi) function
+        #calculate E(d(x, Xi)) function
         hfunc1 <- function(y) { hfunc(c(y)); };
         d_x_Xi = function(y){
           hy=hfunc1(y)
-          F_newpoint = EW_Fi.func(hy, bvec_matrix, link)
+          F_newpoint = EW_Fi.func(hy, bvec_matrix=bvec_matrix, link=link)
           d=psych::tr(inv.F.mat %*% F_newpoint$F_x)
           d=as.numeric(d)
           return(-d)
         }
         grad_d = function(y){
           hy=hfunc1(y)
-          Fi_ans = EW_Fi.func(hy, bvec_matrix, link)
+          Fi_ans = EW_Fi.func(hy, bvec_matrix=bvec_matrix, link=link)
           EUx = Fi_ans$EU_x
-          dprime = EW_dprime_func_self(y, bvec_matrix, hfunc, h.prime, inv.F.mat, EUx, link=link,k.continuous)
+          dprime = EW_dprime_func_self(y, bvec_matrix=bvec_matrix, h.func=hfunc, h.prime=h.prime, inv.F.mat=inv.F.mat, EUx=EUx, link=link,k.continuous=k.continuous)
           return(-dprime)
         }
         x0=(lvec+uvec)/2;
@@ -424,16 +401,16 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
             i1=which.min(apply(dtemp,1,min)); # index of design point to be merged
             i2=which.min(dtemp[i1,]); # index of design point to be merged
             if(k.continuous==1){
-              ystar1=(x.design_old[i1]+x.design_old[i2])/2; # merged design point
+              ystar1=(p.design_old[i1]*x.design_old[i1]+p.design_old[i2]*x.design_old[i2])/(p.design_old[i1]+p.design_old[i2]); # merged design point
               x.design_mer=c(x.design_old[-c(i1,i2)], ystar1)
             }else{
-              ystar1=(x.design_old[i1,]+x.design_old[i2,])/2; # merged design point
+              ystar1=(p.design_old[i1]*x.design_old[i1,]+p.design_old[i2]*x.design_old[i2,])/(p.design_old[i1]+p.design_old[i2]); # merged design point
               x.design_mer=rbind(x.design_old[-c(i1,i2), ], ystar1) # update x.design
             }
             p.design_mer=c(p.design_old[-c(i1,i2)], p.design_old[i1]+p.design_old[i2])
             m.design_mer=m.design_old-1
 
-            # Build X.mat_mer and calculate the Fisher information matrix (F.mat_mer)
+            # Build X.mat_mer and calculate the expectation of Fisher information matrix (E(F.mat_mer))
             X.mat_mer = rep(0,J*p.factor*m.design_mer);
             dim(X.mat_mer)=c(J, p.factor, m.design_mer)  # initial model matrix X
             for(i in 1:m.design_mer){
@@ -441,11 +418,11 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
               X.mat_mer[,,i]=htemp_mer;
             };
 
-            #calculate F_Xi, Fisher information matrix for current design
+            #calculate E(F_Xi), the expectation of Fisher information matrix for current design
             F.mat_mer = 0
             Fi_mer = vector()
             for(i in 1:m.design_mer){
-              new_Fi_mer = EW_Fi.func(X.mat_mer[, ,i], bvec_matrix, link)
+              new_Fi_mer = EW_Fi.func(X.mat_mer[, ,i], bvec_matrix=bvec_matrix, link=link)
               Fi_mer = append(Fi_mer, list(new_Fi_mer$F_x))
               F.mat_mer = F.mat_mer + p.design_mer[i]*new_Fi_mer$F_x
             }
@@ -474,22 +451,23 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
             X.mat[,,i]=htemp;
           };
 
-          #Go back to step2:lift-one
-          optemp=EW_liftoneDoptimal_MLM_func(m=m.design,  p=p.factor, Xi=X.mat, J, thetavec_matrix=bvec_matrix,link=link, reltol=reltol, maxit=maxit, p00=p.design, random=random, nram=nram)
+          #Go back to step3:lift-one
+          optemp=EW_liftoneDoptimal_MLM_func(m=m.design,  p=p.factor, Xi=X.mat, J=J, thetavec_matrix=bvec_matrix,link=link, reltol=reltol, maxit=maxit, p00=p.design, random=random, nram=nram)
 
-          #step3:deleting step new point step
+          #step4:deleting step new point step
           m.design=sum(optemp$p>0);       # updated number of design point ##deleting w_i = 0
           x.design=if(k.continuous==1){x.design[optemp$p>0]}else{x.design[optemp$p>0,];}  # updated list of design points
           p.design=optemp$p[optemp$p>0];  # optimal allocation on current design points
-          det.design=optemp$Maximum;      # optimized |X'UX|
+          det.design=optemp$Maximum;      # optimized |X'E(U)X|
           X.mat = X.mat[, ,optemp$p>0];   # updated model matrix
           #cat("\n", num, "th random points:", "\nx.design", x.design, "\np.design",p.design, "\ndet.design", det.design) #delete
-          #step4: new point step (for each idiscrete, give d and partial d function, use optim to find max d compare to p)
-          #calculate F_Xi, Fisher information matrix for current design
+
+          #step5: new point step (for each idiscrete, give d and partial d function, use optim to find max d compare to p)
+          #calculate E(F_Xi), the expectation of Fisher information matrix for current design
           F.mat = matrix(0, nrow=p.factor, ncol=p.factor)
           Fi = vector()
           for(i in 1:m.design){
-            new_Fi = EW_Fi.func(X.mat[, ,i], bvec_matrix, link)
+            new_Fi = EW_Fi.func(X.mat[, ,i], bvec_matrix=bvec_matrix, link)
             Fi = append(Fi, list(new_Fi$F_x))
             F.mat = F.mat + p.design[i]*new_Fi$F_x
           }
@@ -497,20 +475,20 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
           inv.F.mat = solve(F.mat, tol=.Machine$double.xmin)
 
 
-          #calculate d(x, Xi) function
+          #calculate E(d(x, Xi)) function
           hfunc1 <- function(y) { hfunc(c(y)); };
           d_x_Xi = function(y){
             hy=hfunc1(y)
-            F_newpoint = EW_Fi.func(hy, bvec_matrix, link)
+            F_newpoint = EW_Fi.func(hy, bvec_matrix=bvec_matrix, link=link)
             d=psych::tr(inv.F.mat %*% F_newpoint$F_x)
             d=as.numeric(d)
             return(-d)
           }
           grad_d = function(y){
             hy=hfunc1(y)
-            Fi_ans = EW_Fi.func(hy, bvec_matrix, link)
+            Fi_ans = EW_Fi.func(hy, bvec_matrix=bvec_matrix, link=link)
             EUx = Fi_ans$EU_x
-            dprime = EW_dprime_func_self(y, bvec_matrix, hfunc, h.prime, inv.F.mat, EUx, link=link,k.continuous)
+            dprime = EW_dprime_func_self(y, bvec_matrix=bvec_matrix, h.func=hfunc, h.prime=h.prime, inv.F.mat=inv.F.mat, EUx=EUx, link=link,k.continuous=k.continuous)
             return(-dprime)
           }
           x0=(lvec+uvec)/2;
@@ -557,9 +535,9 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
   if((k.continuous>0)&&(k.continuous<d.factor)) {
     lvec=uvec=rep(0, k.continuous);     # lower bounds and upper bounds for continuous factors
     for(i in 1:k.continuous) {lvec[i]=min(factor.level[[i]]); uvec[i]=max(factor.level[[i]]);}; #read in continuous covariates boundary
-    if(is.null(Xini)){initial.temp=EW_design_initial_self(k.continuous=k.continuous, factor.level=factor.level, lvec=lvec, uvec=uvec, bvec_matrix=bvec_matrix, link=link, h.func=hfunc, EW_Fi.func=EW_Fi.func, delta=delta, epsilon = epsilon, maxit=500); xtemp=initial.temp$X; p0=initial.temp$p0} else {xtemp=Xini; p0=NULL}  #no initial design
+    if(is.null(Xini)){initial.temp=EW_design_initial_MLM(k.continuous=k.continuous, factor.level=factor.level, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec_matrix=bvec_matrix, link=link, h.func=hfunc, EW_Fi.func=EW_Fi.func, delta=delta, epsilon = epsilon, maxit=500); xtemp=initial.temp$X; p0=initial.temp$p0} else {xtemp=Xini; p0=NULL}  #no initial design
 
-    ## update on 2022/08/28 change Xw.discrete.self function to sequentially and randomly choose x_i^0 => design.initial.self function
+    ## update on 2022/08/28 change EW_Xw_discrete_self function to sequentially and randomly choose x_i^0 => design.initial.self function
 
     m.design=nrow(xtemp) # initial number of design points
     X.mat = rep(0,J*p.factor*m.design);
@@ -570,43 +548,44 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
     };
     if(is.null(p0)){p0 = rep(1/m.design, m.design)}
 
-    optemp=EW_liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J, thetavec_matrix=bvec_matrix, link=link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram)
+    optemp=EW_liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J=J, thetavec_matrix=bvec_matrix, link=link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram)
 
     # new point step (for each idiscrete, give d and partial d function, use optim to find max d compare to p)
     m.design=sum(optemp$p>0);       # updated number of design point ##deleting w_i = 0
     x.design=xtemp[optemp$p>0,]; # updated list of design points
     p.design=optemp$p[optemp$p>0];  # optimal allocation on current design points
-    det.design=optemp$Maximum;      # optimized |X'UX|
+    det.design=optemp$Maximum;      # optimized |X'E(U)X|
     X.mat = X.mat[, ,optemp$p>0];   # updated model matrix
 
-    #calculate F_Xi, Fisher information matrix for current design
+    #calculate E(F_Xi), the expectation of Fisher information matrix for current design
     F.mat = 0
     Fi = vector()
     for(i in 1:m.design){
-      new_Fi = EW_Fi.func(X.mat[, ,i], bvec_matrix, link)
+      new_Fi = EW_Fi.func(X.mat[, ,i], bvec_matrix=bvec_matrix, link=link)
       Fi = append(Fi, list(new_Fi$F_x))
       F.mat = F.mat + p.design[i]*new_Fi$F_x
     }
     inv.F.mat = solve(F.mat, tol=.Machine$double.xmin)
 
-    #calculate d(x, Xi) function
-    xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
+    #calculate E(d(x, Xi)) function
+    if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}
+    else{xdiscrete=xlist_fix;}
     ndiscrete=dim(xdiscrete)[1];
 
     for(idiscrete in 1:ndiscrete) {
       hfunc1 <- function(y) { hfunc(c(y, xdiscrete[idiscrete,])); };
       d_x_Xi = function(y){
         hy=hfunc1(y)
-        F_newpoint = EW_Fi.func(hy, bvec_matrix, link)
+        F_newpoint = EW_Fi.func(hy, bvec_matrix=bvec_matrix, link=link)
         d=psych::tr(inv.F.mat %*% F_newpoint$F_x)
         d=as.numeric(d)
         return(-d)
       }
       grad_d = function(y){
         hy=hfunc1(y)
-        Fi_ans = EW_Fi.func(hy, bvec_matrix, link)
+        Fi_ans = EW_Fi.func(hy, bvec_matrix=bvec_matrix, link=link)
         EUx = Fi_ans$EU_x
-        dprime = EW_dprime_func_self(c(y, xdiscrete[idiscrete,]), bvec_matrix, hfunc, h.prime, inv.F.mat, EUx, link=link,k.continuous)
+        dprime = EW_dprime_func_self(c(y, xdiscrete[idiscrete,]), bvec_matrix=bvec_matrix, h.func=hfunc, h.prime=h.prime, inv.F.mat=inv.F.mat, EUx=EUx, link=link,k.continuous=k.continuous)
         return(-dprime)
       }
       x0=(lvec+uvec)/2;
@@ -618,7 +597,6 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
       up_dvalue = d_x_Xi(uvec)
       if(low_dvalue < ytemp$value){ytemp$par=lvec; ytemp$value=low_dvalue}
       if(up_dvalue < ytemp$value){ytemp$par=uvec; ytemp$value=up_dvalue}
-
       #random points
       if(random) for(ia in 1:nram) {
         x0r=x0;
@@ -663,7 +641,7 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
         #identify and merge the two closest design points
         i1=which.min(apply(dtemp,1,min)); # index of design point to be merged
         i2=which.min(dtemp[i1,]); # index of design point to be merged
-        ystar1=(x.design_old[i1,]+x.design_old[i2,])/2; # merged design point
+        ystar1=(p.design_old[i1]*x.design_old[i1,]+p.design_old[i2]*x.design_old[i2,])/(p.design_old[i1]+p.design_old[i2]); # merged design point
         x.design_mer=rbind(x.design_old[-c(i1,i2),], ystar1); # update x.design
         p.design_mer=c(p.design_old[-c(i1,i2)], p.design_old[i1]+p.design_old[i2])
         m.design_mer=m.design_old-1
@@ -676,11 +654,11 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
           X.mat_mer[,,i]=htemp_mer;
         };
 
-        #calculate F_Xi, Fisher information matrix for current design
+        #calculate E(F_Xi), the expectation of Fisher information matrix for current design
         F.mat_mer = 0
         Fi_mer = vector()
         for(i in 1:m.design_mer){
-          new_Fi_mer = EW_Fi.func(X.mat_mer[, ,i], bvec_matrix, link)
+          new_Fi_mer = EW_Fi.func(X.mat_mer[, ,i], bvec_matrix=bvec_matrix, link=link)
           Fi_mer = append(Fi_mer, list(new_Fi_mer$F_x))
           F.mat_mer = F.mat_mer + p.design_mer[i]*new_Fi_mer$F_x
         }
@@ -709,44 +687,46 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
         X.mat[,,i]=htemp;
       };
 
-      #Step3:lift-one
-      optemp=EW_liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J, thetavec_matrix=bvec_matrix, link=link, reltol=reltol, maxit=maxit, p00=p.design, random=random, nram=nram)
+      #Go back to step3:lift-one
+      optemp=EW_liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J=J, thetavec_matrix=bvec_matrix, link=link, reltol=reltol, maxit=maxit, p00=p.design, random=random, nram=nram)
 
-      #Step4:deleting step new point step
+      #step4:deleting step new point step
       m.design=sum(optemp$p>0);       # updated number of design point ##deleting w_i = 0
       x.design=x.design[optemp$p>0,];  # updated list of design points
       p.design=optemp$p[optemp$p>0];  # optimal allocation on current design points
-      det.design=optemp$Maximum;      # optimized |X'UX|
+      det.design=optemp$Maximum;      # optimized |X'E(U)X|
       X.mat = X.mat[, ,optemp$p>0];   # updated model matrix
 
       #step5: new point step (for each idiscrete, give d and partial d function, use optim to find max d compare to p)
-      #calculate F_Xi, Fisher information matrix for current design
+      #calculate E(F_Xi), the expectation of Fisher information matrix for current design
       F.mat = 0
       Fi = vector()
       for(i in 1:m.design){
-        new_Fi = EW_Fi.func(X.mat[, ,i], bvec_matrix, link)
+        new_Fi = EW_Fi.func(X.mat[, ,i], bvec_matrix=bvec_matrix, link=link)
         Fi = append(Fi, list(new_Fi$F_x))
         F.mat = F.mat + p.design[i]*new_Fi$F_x
       }
       inv.F.mat = solve(F.mat, tol=.Machine$double.xmin)
 
-      #calculate d(x, Xi) function
-      xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
+      #calculate E(d(x, Xi)) function
+      if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}
+      else{xdiscrete=xlist_fix;}
+      #xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
       ndiscrete=dim(xdiscrete)[1];
       for(idiscrete in 1:ndiscrete) {
         hfunc1 <- function(y) { hfunc(c(y, xdiscrete[idiscrete,])); };
         d_x_Xi = function(y){
           hy=hfunc1(y)
-          F_newpoint = EW_Fi.func(hy, bvec_matrix, link)
+          F_newpoint = EW_Fi.func(hy, bvec_matrix=bvec_matrix, link=link)
           d=psych::tr(inv.F.mat %*% F_newpoint$F_x)
           d=as.numeric(d)
           return(-d)
         }
         grad_d = function(y){
           hy=hfunc1(y)
-          Fi_ans = EW_Fi.func(hy, bvec_matrix, link)
+          Fi_ans = EW_Fi.func(hy, bvec_matrix=bvec_matrix, link=link)
           EUx = Fi_ans$EU_x
-          dprime = EW_dprime_func_self(c(y, xdiscrete[idiscrete,]), bvec_matrix, hfunc, h.prime, inv.F.mat, EUx, link=link,k.continuous)
+          dprime = EW_dprime_func_self(c(y, xdiscrete[idiscrete,]), bvec_matrix=bvec_matrix, h.func=hfunc, h.prime=h.prime, inv.F.mat=inv.F.mat, EUx=EUx, link=link,k.continuous=k.continuous)
           return(-dprime)
         }
         x0=(lvec+uvec)/2;
@@ -757,10 +737,8 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
         #compare with boundary values, if boundary value is better, then use boundary values
         low_dvalue = d_x_Xi(lvec)
         up_dvalue = d_x_Xi(uvec)
-
         if(low_dvalue < ytemp$value){ytemp$par=lvec; ytemp$value=low_dvalue}
         if(up_dvalue < ytemp$value){ytemp$par=uvec; ytemp$value=up_dvalue}
-
         #random points
         if(random) for(ia in 1:nram) {
           x0r=x0;
@@ -801,7 +779,7 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
     if(random.initial){
       for(num in 1:nram.initial){
         #try different random x_i^0
-        initial.temp=EW_design_initial_self(k.continuous=k.continuous, factor.level=factor.level, lvec=lvec, uvec=uvec, bvec_matrix=bvec_matrix, link=link, h.func=hfunc, EW_Fi.func=EW_Fi.func, delta=delta, epsilon = epsilon, maxit=500); xtemp=initial.temp$X; p0=initial.temp$p0  #random initial design
+        initial.temp=EW_design_initial_MLM(k.continuous=k.continuous, factor.level=factor.level,xlist_fix = xlist_fix, lvec=lvec, uvec=uvec, bvec_matrix=bvec_matrix, link=link, h.func=hfunc, EW_Fi.func=EW_Fi.func, delta=delta, epsilon = epsilon, maxit=500); xtemp=initial.temp$X; p0=initial.temp$p0  #random initial design
 
         ## update on 2022/08/28 change Xw.discrete.self function to sequentially and randomly choose x_i^0 => design.initial.self function
 
@@ -813,42 +791,44 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
           X.mat[,,i]=htemp;
         };
 
-        optemp=EW_liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J, thetavec_matrix=bvec_matrix, link=link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram)
+        optemp=EW_liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J=J, thetavec_matrix=bvec_matrix, link=link, reltol=reltol, maxit=maxit, p00=p0, random=random, nram=nram)
 
         # new point step (for each idiscrete, give d and partial d function, use optim to find max d compare to p)
         m.design=sum(optemp$p>0);       # updated number of design point ##deleting w_i = 0
         x.design=xtemp[optemp$p>0,];  # updated list of design points
         p.design=optemp$p[optemp$p>0];  # optimal allocation on current design points
-        det.design=optemp$Maximum;      # optimized |X'UX|
+        det.design=optemp$Maximum;      # optimized |X'E(U)X|
         X.mat = X.mat[, ,optemp$p>0];   # updated model matrix
 
-        #calculate F_Xi, Fisher information matrix for current design
+        #calculate E(F_Xi), the expectation of Fisher information matrix for current design
         F.mat = 0
         Fi = vector()
         for(i in 1:m.design){
-          new_Fi = EW_Fi.func(X.mat[, ,i], bvec_matrix, link)
+          new_Fi = EW_Fi.func(X.mat[, ,i], bvec_matrix=bvec_matrix, link=link)
           Fi = append(Fi, list(new_Fi$F_x))
           F.mat = F.mat + p.design[i]*new_Fi$F_x
         }
         inv.F.mat = solve(F.mat, tol=.Machine$double.xmin)
 
-        #calculate d(x, Xi) function
-        xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
+        #calculate E(d(x, Xi)) function
+        if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}
+        else{xdiscrete=xlist_fix;}
+        #xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
         ndiscrete=dim(xdiscrete)[1];
         for(idiscrete in 1:ndiscrete) {
           hfunc1 <- function(y) { hfunc(c(y, xdiscrete[idiscrete,])); };
           d_x_Xi = function(y){
             hy=hfunc1(y)
-            F_newpoint = EW_Fi.func(hy, bvec_matrix, link)
+            F_newpoint = EW_Fi.func(hy, bvec_matrix=bvec_matrix, link=link)
             d=psych::tr(inv.F.mat %*% F_newpoint$F_x)
             d=as.numeric(d)
             return(-d)
           }
           grad_d = function(y){
             hy=hfunc1(y)
-            Fi_ans = EW_Fi.func(hy, bvec_matrix, link)
+            Fi_ans = EW_Fi.func(hy, bvec_matrix=bvec_matrix, link=link)
             EUx = Fi_ans$EU_x
-            dprime = EW_dprime_func_self(c(y, xdiscrete[idiscrete,]), bvec_matrix, hfunc, h.prime, inv.F.mat, EUx, link=link,k.continuous)
+            dprime = EW_dprime_func_self(c(y, xdiscrete[idiscrete,]), bvec_matrix=bvec_matrix, h.func=hfunc, h.prime=h.prime, inv.F.mat=inv.F.mat, EUx=EUx, link=link,k.continuous=k.continuous)
             return(-dprime)
           }
           x0=(lvec+uvec)/2;
@@ -879,7 +859,6 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
 
         } #end of for loop of idiscrete
 
-
         nit = 1
         while((-fvalue/p.factor-1 > reltol)&&(nit < maxit)) {
           # add new point into the design
@@ -904,12 +883,12 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
             #identify and merge the two closest design points
             i1=which.min(apply(dtemp,1,min)); # index of design point to be merged
             i2=which.min(dtemp[i1,]); # index of design point to be merged
-            ystar1=(x.design_old[i1,]+x.design_old[i2,])/2; # merged design point
+            ystar1=(p.design_old[i1]*x.design_old[i1,]+p.design_old[i2]*x.design_old[i2,])/(p.design_old[i1]+p.design_old[i2]); # merged design point
             x.design_mer=rbind(x.design_old[-c(i1,i2),], ystar1); # update x.design
             p.design_mer=c(p.design_old[-c(i1,i2)], p.design_old[i1]+p.design_old[i2])
             m.design_mer=m.design_old-1
 
-            # Build X.mat_mer and calculate the Fisher information matrix (F.mat_mer)
+            # Build X.mat_mer and calculate the expectation of Fisher information matrix (E(F.mat_mer))
             X.mat_mer = rep(0,J*p.factor*m.design_mer);
             dim(X.mat_mer)=c(J, p.factor, m.design_mer)  # initial model matrix X
             for(i in 1:m.design_mer){
@@ -917,11 +896,11 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
               X.mat_mer[,,i]=htemp_mer;
             };
 
-            #calculate F_Xi, Fisher information matrix for current design
+            #calculate E(F_Xi), the expectation of Fisher information matrix for current design
             F.mat_mer = 0
             Fi_mer = vector()
             for(i in 1:m.design_mer){
-              new_Fi_mer = EW_Fi.func(X.mat_mer[, ,i], bvec_matrix, link)
+              new_Fi_mer = EW_Fi.func(X.mat_mer[, ,i], bvec_matrix=bvec_matrix, link=link)
               Fi_mer = append(Fi_mer, list(new_Fi_mer$F_x))
               F.mat_mer = F.mat_mer + p.design_mer[i]*new_Fi_mer$F_x
             }
@@ -950,45 +929,46 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level, hfunc, h.prime, bv
             X.mat[,,i]=htemp;
           };
 
-
-          #Step3:lift-one
+          #Go back to step3:lift-one
           optemp=EW_liftoneDoptimal_MLM_func(m=m.design, p=p.factor, Xi=X.mat, J, thetavec_matrix=bvec_matrix, link=link, reltol=reltol, maxit=maxit, p00=p.design, random=random, nram=nram)
 
-          #Step4:deleting step new point step
+          #step4:deleting step new point step
           m.design=sum(optemp$p>0);       # updated number of design point ##deleting w_i = 0
           x.design=x.design[optemp$p>0,];  # updated list of design points
           p.design=optemp$p[optemp$p>0];  # optimal allocation on current design points
-          det.design=optemp$Maximum;      # optimized |X'UX|
+          det.design=optemp$Maximum;      # optimized |X'E(U)X|
           X.mat = X.mat[, ,optemp$p>0];   # updated model matrix
 
-          #Step5: new point step (for each idiscrete, give d and partial d function, use optim to find max d compare to p)
-          #calculate F_Xi, Fisher information matrix for current design
+          #step5: new point step (for each idiscrete, give d and partial d function, use optim to find max d compare to p)
+          #calculate E(F_Xi), the expectation of Fisher information matrix for current design
           F.mat = 0
           Fi = vector()
           for(i in 1:m.design){
-            new_Fi = EW_Fi.func(X.mat[, ,i], bvec_matrix, link)
+            new_Fi = EW_Fi.func(X.mat[, ,i], bvec_matrix=bvec_matrix, link=link)
             Fi = append(Fi, list(new_Fi$F_x))
             F.mat = F.mat + p.design[i]*new_Fi$F_x
           }
           inv.F.mat = solve(F.mat, tol=.Machine$double.xmin)
 
-          #calculate d(x, Xi) function
-          xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
+          #calculate E(d(x, Xi)) function
+          if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}
+          else{xdiscrete=xlist_fix;}
+          # xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
           ndiscrete=dim(xdiscrete)[1];
           for(idiscrete in 1:ndiscrete) {
             hfunc1 <- function(y) { hfunc(c(y, xdiscrete[idiscrete,])); };
             d_x_Xi = function(y){
               hy=hfunc1(y)
-              F_newpoint = EW_Fi.func(hy, bvec_matrix, link)
+              F_newpoint = EW_Fi.func(hy, bvec_matrix=bvec_matrix, link=link)
               d=psych::tr(inv.F.mat %*% F_newpoint$F_x)
               d=as.numeric(d)
               return(-d)
             }
             grad_d = function(y){
               hy=hfunc1(y)
-              Fi_ans = EW_Fi.func(hy, bvec_matrix, link)
+              Fi_ans = EW_Fi.func(hy, bvec_matrix=bvec_matrix, link=link)
               EUx = Fi_ans$EU_x
-              dprime = EW_dprime_func_self(c(y, xdiscrete[idiscrete,]), bvec_matrix, hfunc, h.prime, inv.F.mat, EUx, link=link,k.continuous)
+              dprime = EW_dprime_func_self(c(y, xdiscrete[idiscrete,]), bvec_matrix=bvec_matrix, h.func=hfunc, h.prime=h.prime, inv.F.mat=inv.F.mat, EUx=EUx, link=link,k.continuous=k.continuous)
               return(-dprime)
             }
             x0=(lvec+uvec)/2;

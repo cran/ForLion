@@ -1,11 +1,11 @@
-#' Function to generate fisher information at one design point xi for multinomial logit models
+#' function to generate fisher information at one design point xi for multinomial logit models
 #'
 #' @param X_x model matrix for a specific design point x_i, X_x=h.func(xi)
 #' @param bvec beta coefficients in the model
 #' @param link multinomial logit model link function name "baseline", "cumulative", "adjacent", or"continuation", default to be "continuation"
 #'
-#' @return F_x Fisher information matrix at x_i
-#' @return U_x U matrix for calculation of Fisher information matrix at x_i (see Corollary 3.1 in Bu, Majumdar, Yang(2020))
+#' @return F_x    Fisher information matrix at x_i
+#' @return U_x    U matrix for calculation of Fisher information matrix at x_i (see Corollary 3.1 in Bu, Majumdar, Yang(2020))
 #' @export
 #'
 #' @examples

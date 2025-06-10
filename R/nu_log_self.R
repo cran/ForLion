@@ -1,4 +1,4 @@
-#' Function to calculate w = nu(eta) given eta for log link
+#' function to calculate w = nu(eta) given eta for log link
 #'
 #' @param x Numeric vector of eta, eta = X*beta.
 #' @return A numeric vector representing the diagonal elements of the W matrix (nu(eta)).

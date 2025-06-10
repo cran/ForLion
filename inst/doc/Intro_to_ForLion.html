@@ -340,30 +340,117 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 
-<p><strong>Reference Manuscript</strong>: Huang, Y., Li, K., Mandal, A.
-et al. ForLion: a new algorithm for D-optimal designs under general
-parametric statistical models with mixed factors. Stat Comput 34, 157
-(2024).</p>
-<p>This package implements the Forlion algorithm on the problem of
-designing an experiment with both discrete and continuous factors. The
-ForLion algorithm searches for locally optimal approximate designs under
-the D-criterion. When the true parameters are unknown, we can generate
-the EW D-optimal designs. This features allow users to create efficient
-and robust experimental designs that account for parameter uncertainty.
-The algorithm performs an exhaustive search in a design space with mixed
-factors while keeping high efficiency and reducing the number of
-distinct experimental settings. We mainly focus on generalized linear
-models (GLMs) and multinomial logit models (MLMs). Furthermore,
-implementing approximate designs with continuous settings can be
-challenging in practical applications. To address this issue, our
-package includes an algorithm that converts approximate designs into
-exact designs. This approximate-to-exact design algorithm ensures that
-the resulting exact design remains highly efficient while being more
-feasible for practical implementation.</p>
+<style type="text/css">
+.note-box {
+border: 1px solid #ccc;
+background: white;
+padding: 10px;
+margin: 10px 0;
+border-radius: 5px;
+}
+</style>
+<div id="table-of-contents" class="section level1">
+<h1>Table of Contents</h1>
+<ul>
+<li><a href="#intro">Introduction</a>
+<ul>
+<li><a href="#ForLion">Locally D-optimality and ForLion
+algorithm</a></li>
+<li><a href="#EW_ForLion">EW D-optimality and EW ForLion
+algorithm</a></li>
+</ul></li>
+<li><a href="#Applications">Applications mixed factor experiments</a>
+<ul>
+<li><a href="#example_GLM">GLM Example: electrostatic discharge (ESD)
+experiment</a></li>
+<li><a href="#example_MLM">MLM Example: minimizing surface defects
+experiment</a></li>
+</ul></li>
+<li><a href="#References">References</a></li>
+</ul>
+</div>
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p><a id="intro"></a></p>
+<p>This package implements the ForLion algorithm and EW ForLion on the
+problem of designing an experiment with both discrete and continuous
+factors. The ForLion algorithm searches for locally optimal approximate
+designs under the D-criterion. When the true parameters are unknown, we
+can generate the EW D-optimal designs through EW ForLion algorithm. This
+features allow users to create efficient and robust experimental designs
+that account for parameter uncertainty. The algorithm performs an
+exhaustive search in a design space with mixed factors while keeping
+high efficiency and reducing the number of distinct experimental
+settings.</p>
+<p>We mainly focus on generalized linear models (GLMs) and multinomial
+logit models (MLMs). Furthermore, implementing approximate designs with
+continuous settings can be challenging in practical applications. To
+address this issue, our package includes a rounding algorithm that
+converts the continuous factor values to a feasible experimental value
+based on pre-defined grid levels, and transforms the approximate designs
+into exact designs. This approximate-to-exact design algorithm ensures
+that the resulting exact design remains highly efficient while being
+more feasible for practical implementation.</p>
+<p>The package could be loaded through:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(ForLion)</span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">library</span>(psych)</span></code></pre></div>
-<div id="glm-example" class="section level3">
-<h3>GLM Example</h3>
+<div id="locally-d-optimality-and-forlion-algorithm" class="section level2">
+<h2>Locally D-optimality and ForLion algorithm</h2>
+<p><a id="ForLion"></a></p>
+<p>When the true parameter values <span class="math inline">\(\boldsymbol \theta\)</span> are known, the locally
+D-optiaml design is obtained by finding the design <span class="math inline">\(\boldsymbol \xi = \{(\mathbf x_i, w_i), i =
+1,\dots,m\}\)</span> that maximizes <span class="math display">\[
+f_{locally}(\boldsymbol \xi)=\left| \mathbf F(\boldsymbol \xi,
+\boldsymbol \theta)\right|.\]</span> The theoretical details of the
+ForLion algorithm are presented in reference [1].</p>
+</div>
+<div id="ew-d-optimality-and-ew-forlion-algorithm" class="section level2">
+<h2>EW D-optimality and EW ForLion algorithm</h2>
+<p><a id="EW_ForLion"></a></p>
+<p>However, in practice, the true parameters estimate <span class="math inline">\(\boldsymbol \theta\)</span> are not always
+accurate. When the true parameter values are unknown, traditional
+optimal designs may perform poorly if the assumed parameter estimates
+are inaccurate. So, when <span class="math inline">\(\boldsymbol{\theta}\)</span> is unknown but a
+prior distribution or measure <span class="math inline">\(Q(d\boldsymbol{\theta})\)</span> on <span class="math inline">\(\boldsymbol{\Theta}\)</span> is available, we
+apply the EW D-optimality and look for <span class="math inline">\(\boldsymbol{\xi}\)</span> maximizing</p>
+<p><span class="math display">\[
+f_{\rm EW}(\boldsymbol{\xi}) = |E\{{\mathbf F}(\boldsymbol{\xi},
+\boldsymbol{\Theta})\}| = \left| \sum_{i=1}^m w_i E\left\{ {\mathbf
+F}({\mathbf x}_i, \boldsymbol{\Theta})\right\} \right|.
+\]</span> We provided two approaches to compute the expected information
+matrix. The first is referred to as an integral-based EW D-optimal
+approximate design, in which</p>
+<p><span class="math display">\[
+E\left\{ {\mathbf F}({\mathbf x}_i, \boldsymbol{\Theta})\right\} =
+\int_{\boldsymbol{\Theta}} {\mathbf F}({\mathbf x}_i,
+\boldsymbol{\theta}) Q(d\boldsymbol{\theta}).
+\]</span></p>
+<p>Alternatively, if a dataset from prior studies or pilot studies is
+available, we may bootstrap this dataset, fit the parametric model to
+each bootstrapped sample to obtain parameter estimates <span class="math inline">\(\hat{\boldsymbol{\theta}}_j\)</span>, <span class="math inline">\(j=1, \ldots, B\)</span>. We then seek <span class="math inline">\(\boldsymbol{\xi}\)</span>, which maximizes</p>
+<p><span class="math display">\[
+f_{\rm SEW}(\boldsymbol{\xi}) = |\hat{E}\{{\mathbf F}(\boldsymbol{\xi},
+\boldsymbol{\Theta})\}| = \left| \sum_{i=1}^m w_i \hat{E}\left\{
+{\mathbf F}({\mathbf x}_i, \boldsymbol{\Theta})\right\} \right|.
+\]</span> Hence, we obtain a sample-based EW D-optimal approximate
+design, where</p>
+<p><span class="math display">\[
+\hat{E}\left\{ {\mathbf F}({\mathbf x}_i, \boldsymbol{\Theta})\right\} =
+\frac{1}{B} \sum_{j=1}^B {\mathbf F}({\mathbf x}_i,
+\hat{\boldsymbol{\theta}}_j)
+\]</span> For a detailed description of the EW ForLion algorithm, see
+reference [2].</p>
+</div>
+</div>
+<div id="applications-in-mixed-factor-experiments" class="section level1">
+<h1>Applications in mixed factor experiments</h1>
+<p><a id="Applications"></a></p>
+<p>Through two case studies (GLM and MLM frameworks), we illustrate ’s
+implementation for finding both D-optimal designs and EW D-optimal
+designs in experimental settings.</p>
+<div id="glm-example" class="section level2">
+<h2>GLM Example</h2>
+<p><a id="example_GLM"></a></p>
 <p>This is an example of electrostatic discharge (ESD) experiment in
 Section 4 of the reference manuscript.</p>
 <p>Lukemire et al. (2019) reconsidered the electrostatic discharge (ESD)
@@ -377,6 +464,8 @@ continuous.</p>
 <p>The parameter values: <span class="math inline">\(\boldsymbol \beta =
 (\beta_0, \beta_1, \beta_2, \beta_3, \beta_4, \beta_5,
 \beta_{34})=(-7.5, 1.50,-0.2,-0.15,0.25,0.35,0.4)\)</span></p>
+<div id="locally-d-optimal-approximate-design" class="section level3">
+<h3>Locally D-optimal approximate design</h3>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>hfunc.temp <span class="ot">=</span> <span class="cf">function</span>(y) {<span class="fu">c</span>(y,y[<span class="dv">4</span>]<span class="sc">*</span>y[<span class="dv">5</span>],<span class="dv">1</span>);};   <span class="co"># y -&gt; h(y)=(y1,y2,y3,y4,y5,y4*y5,1)</span></span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>n.factor.temp <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>)  <span class="co"># 1 continuous factor with 4 discrete factors</span></span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>factor.level.temp <span class="ot">=</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="dv">25</span>,<span class="dv">45</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>,<span class="dv">1</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>,<span class="dv">1</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>,<span class="dv">1</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>,<span class="dv">1</span>)) </span>
@@ -384,50 +473,213 @@ continuous.</p>
 <span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>beta.value <span class="ot">=</span> <span class="fu">c</span>(<span class="fl">0.35</span>,<span class="fl">1.50</span>,<span class="sc">-</span><span class="fl">0.2</span>,<span class="sc">-</span><span class="fl">0.15</span>,<span class="fl">0.25</span>,<span class="fl">0.4</span>,<span class="sc">-</span><span class="fl">7.5</span>)       <span class="co"># continuous first and intercept last to fit hfunc.temp</span></span></code></pre></div>
 <p>Then, we use the <em>ForLion_GLM_Optimal()</em> function in ForLion
 package to search for the D-optimal design</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">ForLion_GLM_Optimal</span>(<span class="at">n.factor=</span>n.factor.temp, <span class="at">factor.level=</span>factor.level.temp, <span class="at">hfunc=</span>hfunc.temp,<span class="at">bvec=</span>beta.value,<span class="at">link=</span>link.temp,<span class="at">reltol=</span><span class="fl">1e-8</span>, <span class="at">rel.diff=</span><span class="fl">0.03</span>, <span class="at">maxit=</span><span class="dv">500</span>, <span class="at">random=</span><span class="cn">FALSE</span>, <span class="at">logscale=</span><span class="cn">TRUE</span>)</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; Design Output</span></span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; =============================================================== </span></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; Count   Design Point(s)                          Allocation</span></span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt; --------------------------------------------------------------- </span></span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt; 1       25.0000, -1.0000, -1.0000, -1.0000, -1.0000  0.0868</span></span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt; 2       25.0000, -1.0000, -1.0000, -1.0000,  1.0000  0.0460</span></span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; 3       25.0000, -1.0000, -1.0000,  1.0000, -1.0000  0.1114</span></span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; 4       25.0000, -1.0000, -1.0000,  1.0000,  1.0000  0.0856</span></span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; 5       25.0000, -1.0000,  1.0000, -1.0000, -1.0000  0.0833</span></span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; 6       25.0000, -1.0000,  1.0000, -1.0000,  1.0000  0.1005</span></span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; 7       25.0000, -1.0000,  1.0000,  1.0000, -1.0000  0.0373</span></span>
-<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt; 8       25.0000, -1.0000,  1.0000,  1.0000,  1.0000  0.0923</span></span>
-<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; 9       25.0000,  1.0000, -1.0000,  1.0000, -1.0000  0.0140</span></span>
-<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt; 10      25.0000,  1.0000,  1.0000,  1.0000, -1.0000  0.1328</span></span>
-<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt; 11      29.4156, -1.0000, -1.0000, -1.0000,  1.0000  0.0682</span></span>
-<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; 12      29.0032, -1.0000,  1.0000, -1.0000, -1.0000  0.0128</span></span>
-<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; 13      32.7255, -1.0000,  1.0000,  1.0000, -1.0000  0.0484</span></span>
-<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="co">#&gt; 14      32.6908, -1.0000,  1.0000,  1.0000, -1.0000  0.0763</span></span>
-<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt; 15      31.4224, -1.0000, -1.0000,  1.0000, -1.0000  0.0042</span></span>
-<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt; =============================================================== </span></span>
-<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt; m:</span></span>
-<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt; [1] 15</span></span>
-<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt; det:</span></span>
-<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="co">#&gt; [1] 1.264497e-05</span></span>
-<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="co">#&gt; convergence:</span></span>
-<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
-<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a><span class="co">#&gt; min.diff:</span></span>
-<span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a><span class="co">#&gt; [1] 0.0347</span></span>
-<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a><span class="co">#&gt; x.close:</span></span>
-<span id="cb3-36"><a href="#cb3-36" tabindex="-1"></a><span class="co">#&gt;         [,1] [,2] [,3] [,4] [,5]</span></span>
-<span id="cb3-37"><a href="#cb3-37" tabindex="-1"></a><span class="co">#&gt; [1,] 32.7255   -1    1    1   -1</span></span>
-<span id="cb3-38"><a href="#cb3-38" tabindex="-1"></a><span class="co">#&gt; [2,] 32.6908   -1    1    1   -1</span></span>
-<span id="cb3-39"><a href="#cb3-39" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-40"><a href="#cb3-40" tabindex="-1"></a><span class="co">#&gt; itmax:</span></span>
-<span id="cb3-41"><a href="#cb3-41" tabindex="-1"></a><span class="co">#&gt; [1] 500</span></span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">482</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>forlion.glm<span class="ot">=</span><span class="fu">ForLion_GLM_Optimal</span>(<span class="at">n.factor=</span>n.factor.temp,<span class="at">factor.level=</span>factor.level.temp, <span class="at">hfunc=</span>hfunc.temp,<span class="at">bvec=</span>beta.value,<span class="at">link=</span>link.temp,<span class="at">reltol=</span><span class="fl">1e-8</span>, <span class="at">rel.diff=</span><span class="fl">0.03</span>, <span class="at">maxit=</span><span class="dv">500</span>, <span class="at">random=</span><span class="cn">FALSE</span>, <span class="at">logscale=</span><span class="cn">TRUE</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>forlion.glm</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt; Design Output</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt; =============================================================== </span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt; Count   Design Point(s)                          Allocation</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; --------------------------------------------------------------- </span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; 1       25.0275, -1.0000,  1.0000,  1.0000, -1.0000  0.0877</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; 2       25.1062, -1.0000,  1.0000, -1.0000, -1.0000  0.0800</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; 3       26.0956, -1.0000, -1.0000,  1.0000, -1.0000  0.0678</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; 4       30.0713, -1.0000,  1.0000, -1.0000,  1.0000  0.0599</span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt; 5       25.0000, -1.0000,  1.0000,  1.0000,  1.0000  0.0921</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; 6       29.2390, -1.0000,  1.0000, -1.0000, -1.0000  0.0190</span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt; 7       25.0000, -1.0000, -1.0000, -1.0000,  1.0000  0.0877</span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt; 8       25.0000,  1.0000, -1.0000,  1.0000, -1.0000  0.0130</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; 9       25.0000, -1.0000, -1.0000, -1.0000, -1.0000  0.0860</span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; 10      25.0000, -1.0000,  1.0000, -1.0000,  1.0000  0.0600</span></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="co">#&gt; 11      33.0233, -1.0000,  1.0000,  1.0000, -1.0000  0.0868</span></span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt; 12      25.0000,  1.0000,  1.0000,  1.0000, -1.0000  0.1335</span></span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt; 13      31.5189, -1.0000, -1.0000,  1.0000, -1.0000  0.0413</span></span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt; 14      25.0000, -1.0000, -1.0000,  1.0000,  1.0000  0.0852</span></span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt; =============================================================== </span></span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; m:</span></span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt; [1] 14</span></span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="co">#&gt; det:</span></span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="co">#&gt; [1] 1.224461e-05</span></span>
+<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a><span class="co">#&gt; convergence:</span></span>
+<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a><span class="co">#&gt; min.diff:</span></span>
+<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a><span class="co">#&gt; [1] 2</span></span>
+<span id="cb3-36"><a href="#cb3-36" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-37"><a href="#cb3-37" tabindex="-1"></a><span class="co">#&gt; x.close:</span></span>
+<span id="cb3-38"><a href="#cb3-38" tabindex="-1"></a><span class="co">#&gt;      [,1] [,2] [,3] [,4] [,5]</span></span>
+<span id="cb3-39"><a href="#cb3-39" tabindex="-1"></a><span class="co">#&gt; [1,]   25   -1    1    1    1</span></span>
+<span id="cb3-40"><a href="#cb3-40" tabindex="-1"></a><span class="co">#&gt; [2,]   25   -1    1   -1    1</span></span>
+<span id="cb3-41"><a href="#cb3-41" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-42"><a href="#cb3-42" tabindex="-1"></a><span class="co">#&gt; itmax:</span></span>
+<span id="cb3-43"><a href="#cb3-43" tabindex="-1"></a><span class="co">#&gt; [1] 500</span></span></code></pre></div>
+<p>The output have these key components:</p>
+<ul>
+<li><p><span class="math inline">\(m\)</span>: number of design
+points</p></li>
+<li><p><span class="math inline">\(Design Point\)</span>: matrix with
+rows indicating design point</p></li>
+<li><p><span class="math inline">\(Allocation\)</span>: D-optimal
+approximate allocation</p></li>
+<li><p><span class="math inline">\(det\)</span>: Optimal determinant of
+Fisher information matrix</p></li>
+<li><p><span class="math inline">\(convergence\)</span>: TRUE or FALSE,
+whether converge</p></li>
+<li><p><span class="math inline">\(min.diff\)</span>: the minimum
+Euclidean distance between design points</p></li>
+<li><p><span class="math inline">\(x.close\)</span>: a pair of design
+points with minimum distance</p></li>
+<li><p><span class="math inline">\(itmax\)</span>: iteration of the
+algorithm</p></li>
+</ul>
 </div>
-<div id="mlm-example" class="section level3">
-<h3>MLM Example</h3>
+<div id="locally-d-optimal-exact-design" class="section level3">
+<h3>Locally D-optimal exact design</h3>
+<p>In our ESD experiment with a single continuous variable, the process
+yielded theoretical design points with continuous values, such as
+25.1062 and 26.0956. As these values are not practically feasible, we
+must generate an exact allocation. This is achieved by using function
+<em>GLM_Exact_Design()</em> to convert the continuous values into a
+feasible value set of discrete points and to transform the approximate
+allocation into an exact allocation. We assume that the total number of
+observations is equal to <span class="math inline">\(N=500\)</span> and
+use the rounding level of <span class="math inline">\(L=0.1\)</span> for
+the continuous variable <code>Voltage</code>.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">GLM_Exact_Design</span>(<span class="at">k.continuous=</span><span class="dv">1</span>, <span class="at">design_x=</span>forlion.glm<span class="sc">$</span>x.factor, <span class="at">design_p=</span>forlion.glm<span class="sc">$</span>p,</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="at">det.design=</span>forlion.glm<span class="sc">$</span>det,<span class="at">p=</span><span class="dv">7</span>, <span class="at">ForLion=</span><span class="cn">TRUE</span>, <span class="at">bvec=</span>beta.value, <span class="at">rel.diff=</span><span class="fl">0.5</span>,<span class="at">L=</span><span class="fl">0.1</span>,<span class="at">N=</span><span class="dv">500</span>, <span class="at">hfunc=</span>hfunc.temp, <span class="at">link=</span><span class="st">&quot;logit&quot;</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co">#&gt; Design Output</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt; =============================================================== </span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt; Count   Design Point(s)                          Allocation</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; --------------------------------------------------------------- </span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt; 1       25.0000, -1.0000,  1.0000,  1.0000, -1.0000  0.0877</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; 2       25.1000, -1.0000,  1.0000, -1.0000, -1.0000  0.0800</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt; 3       26.1000, -1.0000, -1.0000,  1.0000, -1.0000  0.0678</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt; 4       30.1000, -1.0000,  1.0000, -1.0000,  1.0000  0.0599</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt; 5       25.0000, -1.0000,  1.0000,  1.0000,  1.0000  0.0921</span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt; 6       29.2000, -1.0000,  1.0000, -1.0000, -1.0000  0.0190</span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt; 7       25.0000, -1.0000, -1.0000, -1.0000,  1.0000  0.0877</span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; 8       25.0000,  1.0000, -1.0000,  1.0000, -1.0000  0.0130</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt; 9       25.0000, -1.0000, -1.0000, -1.0000, -1.0000  0.0860</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt; 10      25.0000, -1.0000,  1.0000, -1.0000,  1.0000  0.0600</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt; 11      33.0000, -1.0000,  1.0000,  1.0000, -1.0000  0.0868</span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; 12      25.0000,  1.0000,  1.0000,  1.0000, -1.0000  0.1335</span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt; 13      31.5000, -1.0000, -1.0000,  1.0000, -1.0000  0.0413</span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt; 14      25.0000, -1.0000, -1.0000,  1.0000,  1.0000  0.0852</span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt; =============================================================== </span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="co">#&gt; ni.design:</span></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt;  [1] 44 40 34 30 46  9 44  6 43 30 43 67 21 43</span></span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a><span class="co">#&gt; rel.efficiency:</span></span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a><span class="co">#&gt; [1] 1.000077</span></span></code></pre></div>
+<p>In here:</p>
+<ul>
+<li><p><span class="math inline">\(ni.design\)</span>: exact
+allocation</p></li>
+<li><p><span class="math inline">\(rel.efficiency\)</span>: relative
+efficiency of the Exact and Approximate Designs</p></li>
+</ul>
+</div>
+<div id="ew-d-optimal-approximate-design" class="section level3">
+<h3>EW D-optimal approximate design</h3>
+<p>When the true parameter values of an experiment are unknown but their
+prior distribution is known, in here we show how to use the function
+<em>EW_ForLion_GLM_Optimal()</em> to find the sample-based EW D-aptimal
+approximate design. In this experiment, we assume that each element of
+<span class="math inline">\(\boldsymbol \theta\)</span> has the
+following independent prior distributions:</p>
+<p><span class="math display">\[
+\beta_0 \sim U(-8,-7),\quad \beta_1 \sim U(1,2), \quad \beta_2 \sim
+U(-0.3,-0.1), \quad  \beta_3 \sim U(-0.3,0) \\
+\beta_4 \sim U(0.1,0.4) , \quad \beta_5 \sim U(0.25, 0.45),\quad
+\beta_{34} \sim U(0.35,0.45)
+\]</span></p>
+<p>We firstly random sample <span class="math inline">\(B=200\)</span>
+parameter vectors from the previously defined prior distributions.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>nrun <span class="ot">=</span> <span class="dv">200</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">0713</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>b_0 <span class="ot">=</span> <span class="fu">runif</span>(nrun, <span class="sc">-</span><span class="dv">8</span>, <span class="sc">-</span><span class="dv">7</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>b_1 <span class="ot">=</span> <span class="fu">runif</span>(nrun, <span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>b_2 <span class="ot">=</span> <span class="fu">runif</span>(nrun, <span class="sc">-</span><span class="fl">0.3</span>, <span class="sc">-</span><span class="fl">0.1</span>)</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>b_3 <span class="ot">=</span> <span class="fu">runif</span>(nrun, <span class="sc">-</span><span class="fl">0.3</span>, <span class="dv">0</span>)</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>b_4 <span class="ot">=</span> <span class="fu">runif</span>(nrun, <span class="fl">0.1</span>, <span class="fl">0.4</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>b_5 <span class="ot">=</span> <span class="fu">runif</span>(nrun, <span class="fl">0.25</span>, <span class="fl">0.45</span>)</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>b_34<span class="ot">=</span> <span class="fu">runif</span>(nrun, <span class="fl">0.35</span>, <span class="fl">0.45</span>)</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>beta.matrix <span class="ot">=</span> <span class="fu">cbind</span>(b_5,b_1,b_2,b_3,b_4,b_34,b_0)</span></code></pre></div>
+<p>Then, we utilize the <em>EW_ForLion_GLM_Optimal()</em> function in
+ForLion package to search for the EW D-optimal approximate design</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">482</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="fu">EW_ForLion_GLM_Optimal</span>(<span class="at">n.factor=</span><span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>), <span class="at">factor.level=</span><span class="fu">list</span>(<span class="fu">c</span>(<span class="dv">25</span>,<span class="dv">45</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>,<span class="dv">1</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>,<span class="dv">1</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>,<span class="dv">1</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>,<span class="dv">1</span>)), <span class="at">hfunc=</span>hfunc.temp, <span class="at">Integral_based=</span><span class="cn">FALSE</span>, <span class="at">b_matrix=</span>beta.matrix, <span class="at">link=</span><span class="st">&quot;logit&quot;</span>, <span class="at">reltol=</span><span class="fl">1e-8</span>, <span class="at">rel.diff=</span><span class="fl">5e-3</span>, <span class="at">optim_grad=</span><span class="cn">TRUE</span>, <span class="at">maxit=</span><span class="dv">500</span>, <span class="at">random=</span><span class="cn">FALSE</span>,<span class="at">nram=</span><span class="dv">1</span>,<span class="at">logscale=</span><span class="cn">TRUE</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt; Design Output</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt; =============================================================== </span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt; Count   Design Point(s)                          Allocation</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt; --------------------------------------------------------------- </span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt; 1       26.2386, -1.0000, -1.0000, -1.0000, -1.0000  0.0553</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt; 2       26.3691, -1.0000,  1.0000, -1.0000, -1.0000  0.1009</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt; 3       28.2073, -1.0000,  1.0000, -1.0000,  1.0000  0.0543</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#&gt; 4       25.0000, -1.0000,  1.0000,  1.0000,  1.0000  0.1015</span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co">#&gt; 5       25.0000, -1.0000, -1.0000,  1.0000, -1.0000  0.1082</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co">#&gt; 6       25.0000, -1.0000, -1.0000, -1.0000,  1.0000  0.0836</span></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt; 7       25.0000, -1.0000, -1.0000,  1.0000,  1.0000  0.0523</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt; 8       34.0074, -1.0000, -1.0000, -1.0000,  1.0000  0.0228</span></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt; 9       38.9351, -1.0000,  1.0000,  1.0000, -1.0000  0.0383</span></span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a><span class="co">#&gt; 10      25.0000,  1.0000, -1.0000,  1.0000,  1.0000  0.0082</span></span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a><span class="co">#&gt; 11      32.1302, -1.0000, -1.0000, -1.0000, -1.0000  0.0095</span></span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a><span class="co">#&gt; 12      38.9270, -1.0000,  1.0000,  1.0000, -1.0000  0.0750</span></span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a><span class="co">#&gt; 13      31.7401, -1.0000, -1.0000,  1.0000,  1.0000  0.0489</span></span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a><span class="co">#&gt; 14      25.0000,  1.0000, -1.0000, -1.0000, -1.0000  0.0487</span></span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a><span class="co">#&gt; 15      25.0000,  1.0000,  1.0000, -1.0000,  1.0000  0.0650</span></span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a><span class="co">#&gt; 16      25.0000,  1.0000, -1.0000,  1.0000, -1.0000  0.0373</span></span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a><span class="co">#&gt; 17      37.8204, -1.0000, -1.0000,  1.0000, -1.0000  0.0085</span></span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a><span class="co">#&gt; 18      25.0000,  1.0000,  1.0000,  1.0000, -1.0000  0.0817</span></span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a><span class="co">#&gt; =============================================================== </span></span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a><span class="co">#&gt; m:</span></span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a><span class="co">#&gt; [1] 18</span></span>
+<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-30"><a href="#cb6-30" tabindex="-1"></a><span class="co">#&gt; det:</span></span>
+<span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a><span class="co">#&gt; [1] 4.101823e-06</span></span>
+<span id="cb6-32"><a href="#cb6-32" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a><span class="co">#&gt; convergence:</span></span>
+<span id="cb6-34"><a href="#cb6-34" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb6-35"><a href="#cb6-35" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-36"><a href="#cb6-36" tabindex="-1"></a><span class="co">#&gt; min.diff:</span></span>
+<span id="cb6-37"><a href="#cb6-37" tabindex="-1"></a><span class="co">#&gt; [1] 0.0082</span></span>
+<span id="cb6-38"><a href="#cb6-38" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-39"><a href="#cb6-39" tabindex="-1"></a><span class="co">#&gt; x.close:</span></span>
+<span id="cb6-40"><a href="#cb6-40" tabindex="-1"></a><span class="co">#&gt;         [,1] [,2] [,3] [,4] [,5]</span></span>
+<span id="cb6-41"><a href="#cb6-41" tabindex="-1"></a><span class="co">#&gt; [1,] 38.9351   -1    1    1   -1</span></span>
+<span id="cb6-42"><a href="#cb6-42" tabindex="-1"></a><span class="co">#&gt; [2,] 38.9270   -1    1    1   -1</span></span>
+<span id="cb6-43"><a href="#cb6-43" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-44"><a href="#cb6-44" tabindex="-1"></a><span class="co">#&gt; itmax:</span></span>
+<span id="cb6-45"><a href="#cb6-45" tabindex="-1"></a><span class="co">#&gt; [1] 500</span></span></code></pre></div>
+<p>The output have these key components:</p>
+<ul>
+<li><p><span class="math inline">\(m\)</span>: number of design
+points</p></li>
+<li><p><span class="math inline">\(Design Point\)</span>: matrix with
+rows indicating design point</p></li>
+<li><p><span class="math inline">\(Allocation\)</span>: the reported EW
+D-optimal approximate allocation</p></li>
+<li><p><span class="math inline">\(det\)</span>: Optimal determinant of
+the expected Fisher information matrix</p></li>
+<li><p><span class="math inline">\(convergence\)</span>: TRUE or FALSE,
+whether converge</p></li>
+<li><p><span class="math inline">\(min.diff\)</span>: the minimum
+Euclidean distance between design points</p></li>
+<li><p><span class="math inline">\(x.close\)</span>: a pair of design
+points with minimum distance</p></li>
+<li><p><span class="math inline">\(itmax\)</span>: iteration of the
+algorithm</p></li>
+</ul>
+</div>
+</div>
+<div id="mlm-example" class="section level2">
+<h2>MLM Example</h2>
+<p><a id="example_MLM"></a></p>
 <p>This is an example of minimizing surface defects experiment, which is
 example in S.3 in the supplementary material of the reference
 manuscript.</p>
@@ -453,155 +705,197 @@ x_{i4} - \beta_5 x_{i5} - \beta_6 x_{i6}\)</span></p>
 \beta_6)=(-1.77994301, -0.05287782,  1.86852211, 2.76330779,\)</span> $
 -0.94437464, 0.18504420, -0.01638597, -0.03543202, -0.07060306,
 0.10347917)$.</p>
+<div id="locally-d-optimal-approximate-design-1" class="section level3">
+<h3>Locally D-optimal approximate design</h3>
 <p><strong>Note: Always put continuous factors ahead of discrete
 factors, pay attention to the order of coefficients pairing with
 predictors</strong></p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>link.temp <span class="ot">=</span> <span class="st">&quot;cumulative&quot;</span></span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="do">## Note: Always put continuous factors ahead of discrete factors, pay attention to the order of coefficients paring with predictors</span></span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>n.factor.temp <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">2</span>)  <span class="co"># 1 discrete factor w/ 2 levels + 5 continuous</span></span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>factor.level.temp <span class="ot">=</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="sc">-</span><span class="dv">25</span>,<span class="dv">25</span>), <span class="fu">c</span>(<span class="sc">-</span><span class="dv">200</span>,<span class="dv">200</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">150</span>,<span class="dv">0</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">100</span>,<span class="dv">0</span>),<span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">16</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>,<span class="dv">1</span>))</span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>J <span class="ot">=</span> <span class="dv">5</span> <span class="co">#num of response levels</span></span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>p <span class="ot">=</span> <span class="dv">10</span> <span class="co">#num of parameters</span></span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a></span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>hfunc.temp <span class="ot">=</span> <span class="cf">function</span>(y){</span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="cf">if</span>(<span class="fu">length</span>(y) <span class="sc">!=</span> <span class="dv">6</span>){<span class="fu">stop</span>(<span class="st">&quot;Input should have length 6&quot;</span>);}</span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  model.mat <span class="ot">=</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, <span class="at">nrow=</span><span class="dv">5</span>, <span class="at">ncol=</span><span class="dv">10</span>, <span class="at">byrow=</span><span class="cn">TRUE</span>)</span>
-<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>  model.mat[<span class="dv">5</span>,]<span class="ot">=</span><span class="dv">0</span></span>
-<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  model.mat[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>,<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>] <span class="ot">=</span> <span class="fu">diag</span>(<span class="dv">4</span>)</span>
-<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>  model.mat[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="dv">5</span>] <span class="ot">=</span>((<span class="sc">-</span><span class="dv">1</span>)<span class="sc">*</span>y[<span class="dv">6</span>])</span>
-<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>  model.mat[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="dv">6</span><span class="sc">:</span><span class="dv">10</span>] <span class="ot">=</span> <span class="fu">matrix</span>(((<span class="sc">-</span><span class="dv">1</span>)<span class="sc">*</span>y[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>]), <span class="at">nrow=</span><span class="dv">4</span>, <span class="at">ncol=</span><span class="dv">5</span>, <span class="at">byrow=</span><span class="cn">TRUE</span>)</span>
-<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>  <span class="fu">return</span>(model.mat)</span>
-<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>}</span>
-<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>hprime.temp<span class="ot">=</span><span class="cn">NULL</span> <span class="co">#use numerical gradient for optim, thus could be NULL, if use analytical gradient then define hprime function</span></span>
-<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a>b.temp <span class="ot">=</span> <span class="fu">c</span>(<span class="sc">-</span><span class="fl">1.77994301</span>, <span class="sc">-</span><span class="fl">0.05287782</span>,  <span class="fl">1.86852211</span>, <span class="fl">2.76330779</span>, <span class="sc">-</span><span class="fl">0.94437464</span>, <span class="fl">0.18504420</span>,  <span class="sc">-</span><span class="fl">0.01638597</span>, <span class="sc">-</span><span class="fl">0.03543202</span>, <span class="sc">-</span><span class="fl">0.07060306</span>, <span class="fl">0.10347917</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>link.temp <span class="ot">=</span> <span class="st">&quot;cumulative&quot;</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="do">## Note: Always put continuous factors ahead of discrete factors, pay attention to the order of coefficients paring with predictors</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>n.factor.temp <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">2</span>)  <span class="co"># 1 discrete factor w/ 2 levels + 5 continuous</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>factor.level.temp <span class="ot">=</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="sc">-</span><span class="dv">25</span>,<span class="dv">25</span>), <span class="fu">c</span>(<span class="sc">-</span><span class="dv">200</span>,<span class="dv">200</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">150</span>,<span class="dv">0</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">100</span>,<span class="dv">0</span>),<span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">16</span>),<span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>,<span class="dv">1</span>))</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>J <span class="ot">=</span> <span class="dv">5</span> <span class="co">#num of response levels</span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>p <span class="ot">=</span> <span class="dv">10</span> <span class="co">#num of parameters</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>hfunc.temp <span class="ot">=</span> <span class="cf">function</span>(y){</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>  <span class="cf">if</span>(<span class="fu">length</span>(y) <span class="sc">!=</span> <span class="dv">6</span>){<span class="fu">stop</span>(<span class="st">&quot;Input should have length 6&quot;</span>);}</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>  model.mat <span class="ot">=</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, <span class="at">nrow=</span><span class="dv">5</span>, <span class="at">ncol=</span><span class="dv">10</span>, <span class="at">byrow=</span><span class="cn">TRUE</span>)</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>  model.mat[<span class="dv">5</span>,]<span class="ot">=</span><span class="dv">0</span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>  model.mat[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>,<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>] <span class="ot">=</span> <span class="fu">diag</span>(<span class="dv">4</span>)</span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>  model.mat[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="dv">5</span>] <span class="ot">=</span>((<span class="sc">-</span><span class="dv">1</span>)<span class="sc">*</span>y[<span class="dv">6</span>])</span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>  model.mat[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="dv">6</span><span class="sc">:</span><span class="dv">10</span>] <span class="ot">=</span> <span class="fu">matrix</span>(((<span class="sc">-</span><span class="dv">1</span>)<span class="sc">*</span>y[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>]), <span class="at">nrow=</span><span class="dv">4</span>, <span class="at">ncol=</span><span class="dv">5</span>, <span class="at">byrow=</span><span class="cn">TRUE</span>)</span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>  <span class="fu">return</span>(model.mat)</span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a>}</span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>hprime.temp<span class="ot">=</span><span class="cn">NULL</span> <span class="co">#use numerical gradient for optim, thus could be NULL, if use analytical gradient then define hprime function</span></span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a>b.temp <span class="ot">=</span> <span class="fu">c</span>(<span class="sc">-</span><span class="fl">1.77994301</span>, <span class="sc">-</span><span class="fl">0.05287782</span>,  <span class="fl">1.86852211</span>, <span class="fl">2.76330779</span>, <span class="sc">-</span><span class="fl">0.94437464</span>, <span class="fl">0.18504420</span>,  <span class="sc">-</span><span class="fl">0.01638597</span>, <span class="sc">-</span><span class="fl">0.03543202</span>, <span class="sc">-</span><span class="fl">0.07060306</span>, <span class="fl">0.10347917</span>)</span></code></pre></div>
 <p>Then, we can use <em>ForLion_MLM_Optimal()</em> function in ForLion
 package to search for the D-optimal design</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">ForLion_MLM_Optimal</span>(<span class="at">J=</span>J, <span class="at">n.factor=</span>n.factor.temp, <span class="at">factor.level=</span>factor.level.temp, <span class="at">hfunc=</span>hfunc.temp, <span class="at">h.prime=</span>hprime.temp, <span class="at">bvec=</span>b.temp, <span class="at">link=</span>link.temp, <span class="at">Fi.func=</span>Fi_MLM_func, <span class="at">delta=</span><span class="fl">1e-2</span>, <span class="at">epsilon=</span><span class="fl">1e-12</span>, <span class="at">reltol=</span><span class="fl">1e-10</span>, <span class="at">rel.diff=</span><span class="fl">5e-4</span>, <span class="at">maxit=</span><span class="dv">500</span>, <span class="at">optim_grad=</span><span class="cn">FALSE</span>)</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; Design Output</span></span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt; ============================================================================== </span></span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; Count   Design Point(s)                                         Allocation</span></span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt; ------------------------------------------------------------------------------ </span></span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; 1       -25.0000, -200.0000,    0.0000,  -18.1815, 16.0000, -1.0000  0.1237</span></span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; 2       -25.0000,  200.0000, -150.0000,  -59.9634, 16.0000,  1.0000  0.0689</span></span>
-<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt; 3       -25.0000, -200.0000,    0.0000,  -14.8567,  0.0000,  1.0000  0.1132</span></span>
-<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt; 4       -22.7757,  200.0000, -150.0000,    0.0000,  0.0000, -1.0000  0.1208</span></span>
-<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt; 5       -25.0000,  200.0000,    0.0000,  -86.0167, 16.0000,  1.0000  0.0915</span></span>
-<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt; 6       -25.0000,  -51.3720,    0.0000, -100.0000,  0.0000,  1.0000  0.0269</span></span>
-<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; 7        24.7015,  200.0000,    0.0000,    0.0000,  0.0000, -1.0000  0.0899</span></span>
-<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; 8        -4.3339,  200.0000,    0.0000, -100.0000,  0.0000,  1.0000  0.0378</span></span>
-<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; 9       -25.0000,  200.0000, -150.0000,  -87.1986,  0.0000,  1.0000  0.0423</span></span>
-<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; 10      -25.0000,  200.0000,    0.0000, -100.0000,  0.0000, -1.0000  0.0681</span></span>
-<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt; 11      -25.0000,   70.6646,    0.0000, -100.0000,  0.0000, -1.0000  0.0228</span></span>
-<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt; 12      -25.0000,   69.9565,    0.0000, -100.0000,  0.0000, -1.0000  0.0025</span></span>
-<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt; 13      -25.0000, -166.2424, -150.0000,    0.0000,  0.0000,  1.0000  0.0385</span></span>
-<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt; 14      -25.0000,   70.2402,    0.0000, -100.0000,  0.0000, -1.0000  0.0014</span></span>
-<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">#&gt; 15      -25.0000, -166.4595, -150.0000,    0.0000,  0.0000,  1.0000  0.0058</span></span>
-<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="co">#&gt; 16      -25.0000,   70.1238,    0.0000, -100.0000,  0.0000, -1.0000  0.0018</span></span>
-<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">#&gt; 17      -25.0000, -166.6505, -150.0000,    0.0000,  0.0000,  1.0000  0.0057</span></span>
-<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="co">#&gt; 18      -25.0000,   70.0653,    0.0000, -100.0000,  0.0000, -1.0000  0.0017</span></span>
-<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">#&gt; 19      -25.0000, -166.8095, -150.0000,    0.0000,  0.0000,  1.0000  0.0033</span></span>
-<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="co">#&gt; 20      -25.0000, -166.8887, -150.0000,    0.0000,  0.0000,  1.0000  0.0017</span></span>
-<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a><span class="co">#&gt; 21      -25.0000, -166.8881, -150.0000,    0.0000,  0.0000,  1.0000  0.0016</span></span>
-<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a><span class="co">#&gt; 22      -25.0000, -166.8871, -150.0000,    0.0000, -0.0000,  1.0000  0.0015</span></span>
-<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a><span class="co">#&gt; 23      -25.0000, -166.8851, -150.0000,    0.0000,  0.0000,  1.0000  0.0015</span></span>
-<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a><span class="co">#&gt; 24      -25.0000, -166.8832, -150.0000,    0.0000,  0.0000,  1.0000  0.0014</span></span>
-<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a><span class="co">#&gt; 25      -25.0000, -166.8825, -150.0000,    0.0000,  0.0000,  1.0000  0.0013</span></span>
-<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a><span class="co">#&gt; 26      -25.0000, -166.8790, -150.0000,    0.0000,  0.0000,  1.0000  0.0012</span></span>
-<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a><span class="co">#&gt; 27      -25.0000, -166.8785, -150.0000,    0.0000,  0.0000,  1.0000  0.0012</span></span>
-<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a><span class="co">#&gt; 28      -25.0000, -166.8744, -150.0000,    0.0000,  0.0000,  1.0000  0.0012</span></span>
-<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a><span class="co">#&gt; 29      -25.0000, -166.8703, -150.0000,    0.0000,  0.0000,  1.0000  0.0011</span></span>
-<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a><span class="co">#&gt; 30      -25.0000, -166.8639, -150.0000,    0.0000,  0.0000,  1.0000  0.0011</span></span>
-<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a><span class="co">#&gt; 31      -25.0000, -166.8630, -150.0000,    0.0000,  0.0000,  1.0000  0.0010</span></span>
-<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a><span class="co">#&gt; 32      -25.0000,   70.0295,    0.0000, -100.0000,  0.0000, -1.0000  0.0009</span></span>
-<span id="cb5-38"><a href="#cb5-38" tabindex="-1"></a><span class="co">#&gt; 33      -25.0000, -166.8529, -150.0000,    0.0000,  0.0000,  1.0000  0.0009</span></span>
-<span id="cb5-39"><a href="#cb5-39" tabindex="-1"></a><span class="co">#&gt; 34      -25.0000, -166.8493, -150.0000,    0.0000,  0.0000,  1.0000  0.0009</span></span>
-<span id="cb5-40"><a href="#cb5-40" tabindex="-1"></a><span class="co">#&gt; 35      -25.0000, -166.8434, -150.0000,    0.0000,  0.0000,  1.0000  0.0008</span></span>
-<span id="cb5-41"><a href="#cb5-41" tabindex="-1"></a><span class="co">#&gt; 36      -25.0000,   70.0376,    0.0000, -100.0000,  0.0000, -1.0000  0.0007</span></span>
-<span id="cb5-42"><a href="#cb5-42" tabindex="-1"></a><span class="co">#&gt; 37      -25.0000, -166.8382, -150.0000,    0.0000,  0.0000,  1.0000  0.0008</span></span>
-<span id="cb5-43"><a href="#cb5-43" tabindex="-1"></a><span class="co">#&gt; 38      -25.0000, -166.8270, -150.0000,    0.0000,  0.0000,  1.0000  0.0007</span></span>
-<span id="cb5-44"><a href="#cb5-44" tabindex="-1"></a><span class="co">#&gt; 39      -25.0000, -166.8218, -150.0000,    0.0000,  0.0000,  1.0000  0.0006</span></span>
-<span id="cb5-45"><a href="#cb5-45" tabindex="-1"></a><span class="co">#&gt; 40      -25.0000, -166.8083, -150.0000,    0.0000,  0.0000,  1.0000  0.0005</span></span>
-<span id="cb5-46"><a href="#cb5-46" tabindex="-1"></a><span class="co">#&gt; 41      -25.0000,   70.0543,    0.0000, -100.0000,  0.0000, -1.0000  0.0003</span></span>
-<span id="cb5-47"><a href="#cb5-47" tabindex="-1"></a><span class="co">#&gt; 42      -25.0000, -166.8046, -150.0000,    0.0000,  0.0000,  1.0000  0.0004</span></span>
-<span id="cb5-48"><a href="#cb5-48" tabindex="-1"></a><span class="co">#&gt; 43      -25.0000, -166.7956, -150.0000,    0.0000,  0.0000,  1.0000  0.0004</span></span>
-<span id="cb5-49"><a href="#cb5-49" tabindex="-1"></a><span class="co">#&gt; 44      -25.0000,   70.0608,    0.0000, -100.0000, -0.0000, -1.0000  0.0002</span></span>
-<span id="cb5-50"><a href="#cb5-50" tabindex="-1"></a><span class="co">#&gt; 45      -25.0000,   70.0615,    0.0000, -100.0000,  0.0000, -1.0000  0.0002</span></span>
-<span id="cb5-51"><a href="#cb5-51" tabindex="-1"></a><span class="co">#&gt; 46      -25.0000, -166.7908, -150.0000,    0.0000,  0.0000,  1.0000  0.0003</span></span>
-<span id="cb5-52"><a href="#cb5-52" tabindex="-1"></a><span class="co">#&gt; 47      -25.0000,   70.0624,    0.0000, -100.0000, -0.0000, -1.0000  0.0002</span></span>
-<span id="cb5-53"><a href="#cb5-53" tabindex="-1"></a><span class="co">#&gt; 48      -25.0000, -166.7871, -150.0000,    0.0000,  0.0000,  1.0000  0.0003</span></span>
-<span id="cb5-54"><a href="#cb5-54" tabindex="-1"></a><span class="co">#&gt; 49      -25.0000,   70.0637,    0.0000, -100.0000, -0.0000, -1.0000  0.0002</span></span>
-<span id="cb5-55"><a href="#cb5-55" tabindex="-1"></a><span class="co">#&gt; 50      -25.0000,   70.0642,    0.0000, -100.0000, -0.0000, -1.0000  0.0002</span></span>
-<span id="cb5-56"><a href="#cb5-56" tabindex="-1"></a><span class="co">#&gt; 51      -25.0000,   70.0648,    0.0000, -100.0000,  0.0000, -1.0000  0.0002</span></span>
-<span id="cb5-57"><a href="#cb5-57" tabindex="-1"></a><span class="co">#&gt; 52      -25.0000, -166.7840, -150.0000,    0.0000,  0.0000,  1.0000  0.0003</span></span>
-<span id="cb5-58"><a href="#cb5-58" tabindex="-1"></a><span class="co">#&gt; 53      -25.0000, -166.7816, -150.0000,    0.0000,  0.0000,  1.0000  0.0002</span></span>
-<span id="cb5-59"><a href="#cb5-59" tabindex="-1"></a><span class="co">#&gt; 54      -25.0000,   70.0661,    0.0000, -100.0000,  0.0000, -1.0000  0.0001</span></span>
-<span id="cb5-60"><a href="#cb5-60" tabindex="-1"></a><span class="co">#&gt; 55      -25.0000, -166.7794, -150.0000,    0.0000,  0.0000,  1.0000  0.0002</span></span>
-<span id="cb5-61"><a href="#cb5-61" tabindex="-1"></a><span class="co">#&gt; 56      -25.0000,   70.0678,    0.0000, -100.0000,  0.0000, -1.0000  0.0001</span></span>
-<span id="cb5-62"><a href="#cb5-62" tabindex="-1"></a><span class="co">#&gt; 57      -25.0000, -166.7789, -150.0000,    0.0000,  0.0000,  1.0000  0.0002</span></span>
-<span id="cb5-63"><a href="#cb5-63" tabindex="-1"></a><span class="co">#&gt; 58      -25.0000, -166.7783, -150.0000,    0.0000,  0.0000,  1.0000  0.0002</span></span>
-<span id="cb5-64"><a href="#cb5-64" tabindex="-1"></a><span class="co">#&gt; 59      -25.0000,   70.0686,    0.0000, -100.0000,  0.0000, -1.0000  0.0001</span></span>
-<span id="cb5-65"><a href="#cb5-65" tabindex="-1"></a><span class="co">#&gt; 60      -25.0000, -166.7765, -150.0000,    0.0000,  0.0000,  1.0000  0.0002</span></span>
-<span id="cb5-66"><a href="#cb5-66" tabindex="-1"></a><span class="co">#&gt; 61      -25.0000, -166.7759, -150.0000,    0.0000,  0.0000,  1.0000  0.0002</span></span>
-<span id="cb5-67"><a href="#cb5-67" tabindex="-1"></a><span class="co">#&gt; 62      -25.0000,   70.0694,    0.0000, -100.0000,  0.0000, -1.0000  0.0001</span></span>
-<span id="cb5-68"><a href="#cb5-68" tabindex="-1"></a><span class="co">#&gt; 63      -25.0000, -166.7750, -150.0000,    0.0000,  0.0000,  1.0000  0.0002</span></span>
-<span id="cb5-69"><a href="#cb5-69" tabindex="-1"></a><span class="co">#&gt; 64      -25.0000,   70.0705,    0.0000, -100.0000,  0.0000, -1.0000  0.0001</span></span>
-<span id="cb5-70"><a href="#cb5-70" tabindex="-1"></a><span class="co">#&gt; 65      -25.0000,   70.0717,    0.0000, -100.0000,  0.0000, -1.0000  0.0001</span></span>
-<span id="cb5-71"><a href="#cb5-71" tabindex="-1"></a><span class="co">#&gt; 66      -25.0000, -166.7705, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
-<span id="cb5-72"><a href="#cb5-72" tabindex="-1"></a><span class="co">#&gt; 67      -25.0000, -166.7691, -150.0000,    0.0000,  0.0000,  1.0000  0.0002</span></span>
-<span id="cb5-73"><a href="#cb5-73" tabindex="-1"></a><span class="co">#&gt; 68      -25.0000,   70.0730,    0.0000, -100.0000, -0.0000, -1.0000  0.0001</span></span>
-<span id="cb5-74"><a href="#cb5-74" tabindex="-1"></a><span class="co">#&gt; 69      -25.0000, -166.7664, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
-<span id="cb5-75"><a href="#cb5-75" tabindex="-1"></a><span class="co">#&gt; 70      -25.0000, -166.7648, -150.0000,    0.0000, -0.0000,  1.0000  0.0001</span></span>
-<span id="cb5-76"><a href="#cb5-76" tabindex="-1"></a><span class="co">#&gt; 71      -25.0000,   70.0753,    0.0000, -100.0000, -0.0000, -1.0000  0.0001</span></span>
-<span id="cb5-77"><a href="#cb5-77" tabindex="-1"></a><span class="co">#&gt; 72      -25.0000, -166.7629, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
-<span id="cb5-78"><a href="#cb5-78" tabindex="-1"></a><span class="co">#&gt; 73      -25.0000,   70.0763,    0.0000, -100.0000,  0.0000, -1.0000  0.0001</span></span>
-<span id="cb5-79"><a href="#cb5-79" tabindex="-1"></a><span class="co">#&gt; 74      -25.0000, -166.7618, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
-<span id="cb5-80"><a href="#cb5-80" tabindex="-1"></a><span class="co">#&gt; 75      -25.0000, -166.7606, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
-<span id="cb5-81"><a href="#cb5-81" tabindex="-1"></a><span class="co">#&gt; 76      -25.0000,   70.0776,    0.0000, -100.0000,  0.0000, -1.0000  0.0001</span></span>
-<span id="cb5-82"><a href="#cb5-82" tabindex="-1"></a><span class="co">#&gt; 77      -25.0000, -166.7594, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
-<span id="cb5-83"><a href="#cb5-83" tabindex="-1"></a><span class="co">#&gt; 78      -25.0000, -166.7581, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
-<span id="cb5-84"><a href="#cb5-84" tabindex="-1"></a><span class="co">#&gt; 79      -25.0000, -166.7574, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
-<span id="cb5-85"><a href="#cb5-85" tabindex="-1"></a><span class="co">#&gt; 80      -25.0000, -166.7561, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
-<span id="cb5-86"><a href="#cb5-86" tabindex="-1"></a><span class="co">#&gt; 81      -25.0000, -166.7556, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
-<span id="cb5-87"><a href="#cb5-87" tabindex="-1"></a><span class="co">#&gt; 82      -25.0000,   70.0810,    0.0000, -100.0000, -0.0000, -1.0000  0.0000</span></span>
-<span id="cb5-88"><a href="#cb5-88" tabindex="-1"></a><span class="co">#&gt; 83      -25.0000, -166.7543, -150.0000,    0.0000, -0.0000,  1.0000  0.0001</span></span>
-<span id="cb5-89"><a href="#cb5-89" tabindex="-1"></a><span class="co">#&gt; 84      -25.0000, -166.7534, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
-<span id="cb5-90"><a href="#cb5-90" tabindex="-1"></a><span class="co">#&gt; 85      -25.0000, -166.7527, -150.0000,    0.0000,  0.0000,  1.0000  0.0001</span></span>
-<span id="cb5-91"><a href="#cb5-91" tabindex="-1"></a><span class="co">#&gt; 86      -25.0000,   70.0825,    0.0000, -100.0000,  0.0000, -1.0000  0.0000</span></span>
-<span id="cb5-92"><a href="#cb5-92" tabindex="-1"></a><span class="co">#&gt; 87      -25.0000, -166.7512, -150.0000,    0.0000,  0.0000,  1.0000  0.0000</span></span>
-<span id="cb5-93"><a href="#cb5-93" tabindex="-1"></a><span class="co">#&gt; 88      -25.0000, -166.7505, -150.0000,    0.0000,  0.0000,  1.0000  0.0000</span></span>
-<span id="cb5-94"><a href="#cb5-94" tabindex="-1"></a><span class="co">#&gt; 89      -25.0000, -166.7499, -150.0000,    0.0000,  0.0000,  1.0000  0.0000</span></span>
-<span id="cb5-95"><a href="#cb5-95" tabindex="-1"></a><span class="co">#&gt; 90      -25.0000,   70.0830,    0.0000, -100.0000, -0.0000, -1.0000  0.0000</span></span>
-<span id="cb5-96"><a href="#cb5-96" tabindex="-1"></a><span class="co">#&gt; 91      -25.0000,   70.0838,    0.0000, -100.0000,  0.0000, -1.0000  0.0000</span></span>
-<span id="cb5-97"><a href="#cb5-97" tabindex="-1"></a><span class="co">#&gt; 92      -25.0000, -166.7478, -150.0000,    0.0000, -0.0000,  1.0000  0.0000</span></span>
-<span id="cb5-98"><a href="#cb5-98" tabindex="-1"></a><span class="co">#&gt; 93      -25.0000,   70.0847,    0.0000, -100.0000,  0.0000, -1.0000  0.0000</span></span>
-<span id="cb5-99"><a href="#cb5-99" tabindex="-1"></a><span class="co">#&gt; 94      -25.0000, -166.7460, -150.0000,    0.0000,  0.0000,  1.0000  0.0000</span></span>
-<span id="cb5-100"><a href="#cb5-100" tabindex="-1"></a><span class="co">#&gt; 95      -25.0000,   70.0853,    0.0000, -100.0000,  0.0000, -1.0000  0.0000</span></span>
-<span id="cb5-101"><a href="#cb5-101" tabindex="-1"></a><span class="co">#&gt; 96      -25.0000, -166.7448, -150.0000,    0.0000,  0.0000,  1.0000  0.0000</span></span>
-<span id="cb5-102"><a href="#cb5-102" tabindex="-1"></a><span class="co">#&gt; 97      -25.0000, -166.7441, -150.0000,    0.0000,  0.0000,  1.0000  0.0000</span></span>
-<span id="cb5-103"><a href="#cb5-103" tabindex="-1"></a><span class="co">#&gt; 98      -25.0000,   70.0871,    0.0000, -100.0000, -0.0000, -1.0000  0.0000</span></span>
-<span id="cb5-104"><a href="#cb5-104" tabindex="-1"></a><span class="co">#&gt; 99       25.0000,  200.0000,    0.0000,    0.0000, 16.0000,  1.0000  0.1031</span></span>
-<span id="cb5-105"><a href="#cb5-105" tabindex="-1"></a><span class="co">#&gt; 100     -25.0000, -166.7424, -150.0000,    0.0000,  0.0000,  1.0000  0.0000</span></span>
-<span id="cb5-106"><a href="#cb5-106" tabindex="-1"></a><span class="co">#&gt; ============================================================================== </span></span>
-<span id="cb5-107"><a href="#cb5-107" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-108"><a href="#cb5-108" tabindex="-1"></a><span class="co">#&gt; m:</span></span>
-<span id="cb5-109"><a href="#cb5-109" tabindex="-1"></a><span class="co">#&gt; [1] 100</span></span>
-<span id="cb5-110"><a href="#cb5-110" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-111"><a href="#cb5-111" tabindex="-1"></a><span class="co">#&gt; det:</span></span>
-<span id="cb5-112"><a href="#cb5-112" tabindex="-1"></a><span class="co">#&gt; [1] 219352835</span></span>
-<span id="cb5-113"><a href="#cb5-113" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-114"><a href="#cb5-114" tabindex="-1"></a><span class="co">#&gt; convergence:</span></span>
-<span id="cb5-115"><a href="#cb5-115" tabindex="-1"></a><span class="co">#&gt; [1] FALSE</span></span>
-<span id="cb5-116"><a href="#cb5-116" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-117"><a href="#cb5-117" tabindex="-1"></a><span class="co">#&gt; min.diff:</span></span>
-<span id="cb5-118"><a href="#cb5-118" tabindex="-1"></a><span class="co">#&gt; [1] 5e-04</span></span>
-<span id="cb5-119"><a href="#cb5-119" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-120"><a href="#cb5-120" tabindex="-1"></a><span class="co">#&gt; x.close:</span></span>
-<span id="cb5-121"><a href="#cb5-121" tabindex="-1"></a><span class="co">#&gt;      [,1]      [,2] [,3] [,4] [,5] [,6]</span></span>
-<span id="cb5-122"><a href="#cb5-122" tabindex="-1"></a><span class="co">#&gt; [1,]  -25 -166.8790 -150    0    0    1</span></span>
-<span id="cb5-123"><a href="#cb5-123" tabindex="-1"></a><span class="co">#&gt; [2,]  -25 -166.8785 -150    0    0    1</span></span>
-<span id="cb5-124"><a href="#cb5-124" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-125"><a href="#cb5-125" tabindex="-1"></a><span class="co">#&gt; itmax:</span></span>
-<span id="cb5-126"><a href="#cb5-126" tabindex="-1"></a><span class="co">#&gt; [1] 500</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="fu">ForLion_MLM_Optimal</span>(<span class="at">J=</span>J, <span class="at">n.factor=</span>n.factor.temp, <span class="at">factor.level=</span>factor.level.temp, <span class="at">hfunc=</span>hfunc.temp, <span class="at">h.prime=</span>hprime.temp, <span class="at">bvec=</span>b.temp, <span class="at">link=</span>link.temp, <span class="at">Fi.func=</span>Fi_MLM_func, <span class="at">delta=</span><span class="fl">1e-2</span>, <span class="at">epsilon=</span><span class="fl">1e-10</span>, <span class="at">reltol=</span><span class="fl">1e-8</span>, <span class="at">rel.diff=</span><span class="fl">0.5</span>, <span class="at">maxit=</span><span class="dv">500</span>, <span class="at">optim_grad=</span><span class="cn">FALSE</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt; Design Output</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; ============================================================================== </span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt; Count   Design Point(s)                                         Allocation</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; ------------------------------------------------------------------------------ </span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; 1        -8.7748, -200.0000,    0.0000,    0.0000, 16.0000,  1.0000  0.1002</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; 2       -25.0000,  167.9246,    0.0000, -100.0000,  0.0000,  1.0000  0.0977</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt; 3        25.0000,  200.0000,    0.0000,    0.0000,  0.0000,  1.0000  0.1148</span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt; 4        -9.2144,  200.0000,    0.0000, -100.0000,  0.0000, -1.0000  0.0447</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt; 5       -25.0000, -153.3904,    0.0000,    0.0000,  0.0000, -1.0000  0.0935</span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt; 6       -25.0000,  200.0000, -150.0000,  -83.5990,  0.0000,  1.0000  0.0651</span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt; 7       -25.0000,  200.0000, -117.5017,    0.0000, 16.0000, -1.0000  0.1237</span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt; 8       -25.0000, -145.9755, -150.0000,    0.0000,  0.0000,  1.0000  0.0910</span></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="co">#&gt; 9       -14.0455,  200.0000, -150.0000,    0.0000,  0.0000,  1.0000  0.0275</span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co">#&gt; 10      -25.0000, -200.0000,    0.0000,  -31.3523,  0.0000, -1.0000  0.0274</span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt; 11       -2.6044,  200.0000, -150.0000,    0.0000,  0.0000, -1.0000  0.0764</span></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co">#&gt; 12      -25.0000,   77.3014, -150.0000,    0.0000,  0.0000,  1.0000  0.0058</span></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="co">#&gt; 13      -25.0000,   81.0170,    0.0000, -100.0000,  0.0000, -1.0000  0.0048</span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="co">#&gt; 14      -25.0000,   78.7941,    0.0000, -100.0000,  0.0000, -1.0000  0.0298</span></span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt; 15       25.0000,  200.0000,    0.0000,    0.0000, 16.0000,  1.0000  0.0741</span></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt; 16      -25.0000,   77.8620, -150.0000,    0.0000,  0.0000,  1.0000  0.0005</span></span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="co">#&gt; 17      -25.0000,   77.6792,    0.0000, -100.0000,  0.0000, -1.0000  0.0232</span></span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="co">#&gt; ============================================================================== </span></span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt; m:</span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt; [1] 17</span></span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt; det:</span></span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt; [1] 163138258</span></span>
+<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="co">#&gt; convergence:</span></span>
+<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-35"><a href="#cb8-35" tabindex="-1"></a><span class="co">#&gt; min.diff:</span></span>
+<span id="cb8-36"><a href="#cb8-36" tabindex="-1"></a><span class="co">#&gt; [1] 0.5607</span></span>
+<span id="cb8-37"><a href="#cb8-37" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-38"><a href="#cb8-38" tabindex="-1"></a><span class="co">#&gt; x.close:</span></span>
+<span id="cb8-39"><a href="#cb8-39" tabindex="-1"></a><span class="co">#&gt;      [,1]    [,2] [,3] [,4] [,5] [,6]</span></span>
+<span id="cb8-40"><a href="#cb8-40" tabindex="-1"></a><span class="co">#&gt; [1,]  -25 77.3014 -150    0    0    1</span></span>
+<span id="cb8-41"><a href="#cb8-41" tabindex="-1"></a><span class="co">#&gt; [2,]  -25 77.8620 -150    0    0    1</span></span>
+<span id="cb8-42"><a href="#cb8-42" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-43"><a href="#cb8-43" tabindex="-1"></a><span class="co">#&gt; itmax:</span></span>
+<span id="cb8-44"><a href="#cb8-44" tabindex="-1"></a><span class="co">#&gt; [1] 283</span></span></code></pre></div>
+</div>
+<div id="ew-d-optimal-approximate-design-1" class="section level3">
+<h3>EW D-optimal approximate design</h3>
+<p>In this minimizing surface defects experiment, we have following
+independent prior distributions:</p>
+<p><span class="math display">\[
+\beta_1 \sim U(-1,0),\quad \beta_2 \sim U(0,0.2), \quad \beta_3 \sim
+U(-0.1,0.1), \quad  \beta_4 \sim U(-0.1,0.1), \quad \beta_5 \sim
+U(-0.1,0.1) ,\\
+\beta_6 \sim U(0, 0.2), \quad \theta_1 \sim U(-2, -1),\quad \theta_2
+\sim U(-0.5,0.5), \quad \theta_3 \sim U(1,2), \quad \theta_4 \sim U(2.5,
+3.5)
+\]</span></p>
+<p>To construct a robust design against parameter misspecifications, we
+sample <span class="math inline">\(B=100\)</span> parameter vectors from
+the prior distributions</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>nrun <span class="ot">=</span> <span class="dv">100</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">0713</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>b_clean <span class="ot">=</span> <span class="fu">runif</span>(nrun, <span class="sc">-</span><span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>b_temperature <span class="ot">=</span> <span class="fu">runif</span>(nrun, <span class="dv">0</span>, <span class="fl">0.2</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>b_pressure <span class="ot">=</span> <span class="fu">runif</span>(nrun, <span class="sc">-</span><span class="fl">0.1</span>, <span class="fl">0.1</span>)</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>b_nitrogen <span class="ot">=</span> <span class="fu">runif</span>(nrun, <span class="sc">-</span><span class="fl">0.1</span>, <span class="fl">0.1</span>)</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>b_silane <span class="ot">=</span> <span class="fu">runif</span>(nrun, <span class="sc">-</span><span class="fl">0.1</span>, <span class="fl">0.1</span>)</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>b_time <span class="ot">=</span> <span class="fu">runif</span>(nrun, <span class="dv">0</span>, <span class="fl">0.2</span>)</span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>theta1 <span class="ot">=</span> <span class="fu">runif</span>(nrun, <span class="sc">-</span><span class="dv">2</span>, <span class="sc">-</span><span class="dv">1</span>)</span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>theta2 <span class="ot">=</span> <span class="fu">runif</span>(nrun, <span class="sc">-</span><span class="fl">0.5</span>, <span class="fl">0.5</span>)</span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>theta3 <span class="ot">=</span> <span class="fu">runif</span>(nrun, <span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a>theta4 <span class="ot">=</span> <span class="fu">runif</span>(nrun, <span class="fl">2.5</span>, <span class="fl">3.5</span>)</span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a>beta.temp2 <span class="ot">=</span> <span class="fu">cbind</span>(theta1, theta2, theta3, theta4, b_clean, b_temperature, b_pressure, b_nitrogen, b_silane, b_time)</span></code></pre></div>
+<p>Then, we can use <em>EW_ForLion_MLM_Optimal()</em> function to find
+the sampled-based EW D-optimal approximate design</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>EW_forlion.MLM <span class="ot">=</span><span class="fu">EW_ForLion_MLM_Optimal</span>(<span class="at">J=</span>J, <span class="at">n.factor=</span>n.factor.temp,</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="at">factor.level=</span>factor.level.temp,<span class="at">hfunc=</span>hfunc.temp, <span class="at">h.prime=</span>hprime.temp, <span class="at">bvec_matrix=</span>beta.temp2, <span class="at">link=</span>link.temp, <span class="at">EW_Fi.func=</span>EW_Fi_MLM_func, </span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="at">delta=</span><span class="fl">1e-2</span>, <span class="at">epsilon=</span><span class="fl">1e-10</span>, <span class="at">reltol=</span><span class="fl">1e-8</span>, <span class="at">rel.diff=</span><span class="fl">0.5</span>, <span class="at">maxit=</span><span class="dv">500</span>, <span class="at">optim_grad=</span><span class="cn">FALSE</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>EW_forlion.MLM </span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co">#&gt; Design Output</span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; ============================================================================== </span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="co">#&gt; Count   Design Point(s)                                         Allocation</span></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co">#&gt; ------------------------------------------------------------------------------ </span></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="co">#&gt; 1        16.9548,  -11.4335,    0.0000,    0.0000, 16.0000,  1.0000  0.1330</span></span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="co">#&gt; 2       -11.2636,   -2.9635,    0.0000,    0.0000,  0.0000,  1.0000  0.0909</span></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a><span class="co">#&gt; 3       -25.0000,  -10.5257,    0.0000,  -40.5976, 16.0000, -1.0000  0.1401</span></span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a><span class="co">#&gt; 4       -25.0000, -137.9685, -150.0000,    0.0000, 16.0000,  1.0000  0.0622</span></span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a><span class="co">#&gt; 5        14.8324,   -3.6947,    0.0000,    0.0000,  0.0000, -1.0000  0.1694</span></span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a><span class="co">#&gt; 6        25.0000,   95.6302, -150.0000, -100.0000,  0.0000, -1.0000  0.0195</span></span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a><span class="co">#&gt; 7        25.0000,  -88.6268,    0.0000, -100.0000,  0.0000,  1.0000  0.0040</span></span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a><span class="co">#&gt; 8        25.0000,  200.0000, -150.0000,    0.0000, 16.0000, -1.0000  0.0695</span></span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a><span class="co">#&gt; 9       -25.0000, -200.0000, -150.0000, -100.0000,  0.0000, -1.0000  0.0600</span></span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a><span class="co">#&gt; 10      -25.0000,   26.7590,    0.0000, -100.0000,  0.0000,  1.0000  0.0725</span></span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a><span class="co">#&gt; 11       25.0000,   68.8150,  -83.8015, -100.0000, 16.0000,  1.0000  0.0331</span></span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a><span class="co">#&gt; 12      -25.0000,   54.2647,  -83.2000,    0.0000, -0.0000,  1.0000  0.0650</span></span>
+<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a><span class="co">#&gt; 13      -25.0000,  200.0000,  -15.0079, -100.0000, 16.0000, -1.0000  0.0304</span></span>
+<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a><span class="co">#&gt; 14       25.0000,  -22.8450,  -54.6474, -100.0000,  0.0000,  1.0000  0.0504</span></span>
+<span id="cb10-25"><a href="#cb10-25" tabindex="-1"></a><span class="co">#&gt; ============================================================================== </span></span>
+<span id="cb10-26"><a href="#cb10-26" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb10-27"><a href="#cb10-27" tabindex="-1"></a><span class="co">#&gt; m:</span></span>
+<span id="cb10-28"><a href="#cb10-28" tabindex="-1"></a><span class="co">#&gt; [1] 14</span></span>
+<span id="cb10-29"><a href="#cb10-29" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb10-30"><a href="#cb10-30" tabindex="-1"></a><span class="co">#&gt; det:</span></span>
+<span id="cb10-31"><a href="#cb10-31" tabindex="-1"></a><span class="co">#&gt; [1] 500802</span></span>
+<span id="cb10-32"><a href="#cb10-32" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb10-33"><a href="#cb10-33" tabindex="-1"></a><span class="co">#&gt; convergence:</span></span>
+<span id="cb10-34"><a href="#cb10-34" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb10-35"><a href="#cb10-35" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb10-36"><a href="#cb10-36" tabindex="-1"></a><span class="co">#&gt; min.diff:</span></span>
+<span id="cb10-37"><a href="#cb10-37" tabindex="-1"></a><span class="co">#&gt; [1] 18.0109</span></span>
+<span id="cb10-38"><a href="#cb10-38" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb10-39"><a href="#cb10-39" tabindex="-1"></a><span class="co">#&gt; x.close:</span></span>
+<span id="cb10-40"><a href="#cb10-40" tabindex="-1"></a><span class="co">#&gt;         [,1]     [,2] [,3] [,4] [,5] [,6]</span></span>
+<span id="cb10-41"><a href="#cb10-41" tabindex="-1"></a><span class="co">#&gt; [1,] 16.9548 -11.4335    0    0   16    1</span></span>
+<span id="cb10-42"><a href="#cb10-42" tabindex="-1"></a><span class="co">#&gt; [2,] 14.8324  -3.6947    0    0    0   -1</span></span>
+<span id="cb10-43"><a href="#cb10-43" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb10-44"><a href="#cb10-44" tabindex="-1"></a><span class="co">#&gt; itmax:</span></span>
+<span id="cb10-45"><a href="#cb10-45" tabindex="-1"></a><span class="co">#&gt; [1] 16</span></span></code></pre></div>
+</div>
+<div id="ew-d-optimal-exact-design" class="section level3">
+<h3>EW D-optimal exact design</h3>
+<p>Based on the obtained sample-based EW D-optimal approximate design.
+Assuming that the total number of experimental units is <span class="math inline">\(n=1000\)</span>, we apply
+<em>MLM_Exact_Design()</em> with <span class="math inline">\(L
+=c(0.5,0.1,0.1,0.1,1)\)</span> for continuous control variables and
+obtain an exact design</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="fu">MLM_Exact_Design</span>(<span class="at">J=</span>J, <span class="at">k.continuous=</span><span class="dv">5</span>,<span class="at">design_x=</span>EW_forlion.MLM<span class="sc">$</span>x.factor,<span class="at">design_p=</span>EW_forlion.MLM<span class="sc">$</span>p,<span class="at">det.design=</span>EW_forlion.MLM<span class="sc">$</span>det,<span class="at">p=</span><span class="dv">10</span>,<span class="at">ForLion=</span><span class="cn">FALSE</span>,<span class="at">bvec_matrix=</span>beta.temp2,<span class="at">rel.diff=</span><span class="dv">1</span>,<span class="at">L=</span><span class="fu">c</span>(<span class="fl">0.5</span>,<span class="fl">0.1</span>,<span class="fl">0.1</span>,<span class="fl">0.1</span>,<span class="dv">1</span>),<span class="at">N=</span><span class="dv">1000</span>,<span class="at">hfunc=</span>hfunc.temp,<span class="at">link=</span>link.temp)</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="co">#&gt; Design Output</span></span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co">#&gt; ============================================================================== </span></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co">#&gt; Count   Design Point(s)                                         Allocation</span></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="co">#&gt; ------------------------------------------------------------------------------ </span></span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#&gt; 1        17.0000,  -11.4000,    0.0000,    0.0000, 16.0000,  1.0000  0.1330</span></span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="co">#&gt; 2       -11.5000,   -3.0000,    0.0000,    0.0000,  0.0000,  1.0000  0.0909</span></span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; 3       -25.0000,  -10.5000,    0.0000,  -40.6000, 16.0000, -1.0000  0.1401</span></span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="co">#&gt; 4       -25.0000, -138.0000, -150.0000,    0.0000, 16.0000,  1.0000  0.0622</span></span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co">#&gt; 5        15.0000,   -3.7000,    0.0000,    0.0000,  0.0000, -1.0000  0.1694</span></span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a><span class="co">#&gt; 6        25.0000,   95.6000, -150.0000, -100.0000,  0.0000, -1.0000  0.0195</span></span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a><span class="co">#&gt; 7        25.0000,  -88.6000,    0.0000, -100.0000,  0.0000,  1.0000  0.0040</span></span>
+<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a><span class="co">#&gt; 8        25.0000,  200.0000, -150.0000,    0.0000, 16.0000, -1.0000  0.0695</span></span>
+<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a><span class="co">#&gt; 9       -25.0000, -200.0000, -150.0000, -100.0000,  0.0000, -1.0000  0.0600</span></span>
+<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a><span class="co">#&gt; 10      -25.0000,   26.8000,    0.0000, -100.0000,  0.0000,  1.0000  0.0725</span></span>
+<span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a><span class="co">#&gt; 11       25.0000,   68.8000,  -83.8000, -100.0000, 16.0000,  1.0000  0.0331</span></span>
+<span id="cb11-17"><a href="#cb11-17" tabindex="-1"></a><span class="co">#&gt; 12      -25.0000,   54.3000,  -83.2000,    0.0000,  0.0000,  1.0000  0.0650</span></span>
+<span id="cb11-18"><a href="#cb11-18" tabindex="-1"></a><span class="co">#&gt; 13      -25.0000,  200.0000,  -15.0000, -100.0000, 16.0000, -1.0000  0.0304</span></span>
+<span id="cb11-19"><a href="#cb11-19" tabindex="-1"></a><span class="co">#&gt; 14       25.0000,  -22.8000,  -54.6000, -100.0000,  0.0000,  1.0000  0.0504</span></span>
+<span id="cb11-20"><a href="#cb11-20" tabindex="-1"></a><span class="co">#&gt; ============================================================================== </span></span>
+<span id="cb11-21"><a href="#cb11-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb11-22"><a href="#cb11-22" tabindex="-1"></a><span class="co">#&gt; ni.design:</span></span>
+<span id="cb11-23"><a href="#cb11-23" tabindex="-1"></a><span class="co">#&gt;  [1] 133  91 140  62 169  20   4  70  60  73  33  65  30  50</span></span>
+<span id="cb11-24"><a href="#cb11-24" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb11-25"><a href="#cb11-25" tabindex="-1"></a><span class="co">#&gt; rel.efficiency:</span></span>
+<span id="cb11-26"><a href="#cb11-26" tabindex="-1"></a><span class="co">#&gt; [1] 0.9991006</span></span></code></pre></div>
+</div>
+</div>
+</div>
+<div id="references" class="section level1">
+<h1>References:</h1>
+<p><a id="References"></a></p>
+<p>[1] Huang, Y., Li, K., Mandal, A. et al. ForLion: a new algorithm for
+D-optimal designs under general parametric statistical models with mixed
+factors. Stat Comput 34, 157 (2024).</p>
+<p>[2] Lin, S., Huang, Y. and Yang, J., 2025. EW D-optimal Designs for
+Experiments with Mixed Factors. arXiv preprint arXiv:2505.00629.</p>
 </div>
 
 

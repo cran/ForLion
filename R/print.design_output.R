@@ -1,4 +1,4 @@
-#' Print Method for Design Output from ForLion Algorithm
+#' Print Method for Design Output from ForLion Algorithms
 #'
 #' @description Custom print method for a list containing design information.
 #' @param x An object of class `design_output`.

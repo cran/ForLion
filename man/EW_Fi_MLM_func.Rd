@@ -2,24 +2,24 @@
 % Please edit documentation in R/EW_Fi_MLM_func.R
 \name{EW_Fi_MLM_func}
 \alias{EW_Fi_MLM_func}
-\title{Function to generate the Expectation of fisher information at one design point xi for multinomial logit models}
+\title{function to generate the expected fisher information at one design point xi for multinomial logit models}
 \usage{
 EW_Fi_MLM_func(X_x, bvec_matrix, link = "continuation")
 }
 \arguments{
 \item{X_x}{model matrix for a specific design point x_i, X_x=h.func(xi)}
 
-\item{bvec_matrix}{the matrix of the bootstrap parameter values of beta}
+\item{bvec_matrix}{the matrix of the sampled parameter values of beta}
 
 \item{link}{multinomial logit model link function name "baseline", "cumulative", "adjacent", or"continuation", default to be "continuation"}
 }
 \value{
-F_x Fisher information matrix at x_i
+F_x     The expected Fisher information matrix at x_i
 
-EU_x U matrix for calculation the Expectation of Fisher information matrix at x_i
+EU_x    E(U) matrix for calculation the expected of Fisher information matrix at x_i
 }
 \description{
-Function to generate the Expectation of fisher information at one design point xi for multinomial logit models
+function to generate the expected fisher information at one design point xi for multinomial logit models
 }
 \examples{
 link.temp = "continuation"

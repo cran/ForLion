@@ -2,12 +2,12 @@
 % Please edit documentation in R/xmat_discrete_self.R
 \name{xmat_discrete_self}
 \alias{xmat_discrete_self}
-\title{Generate GLM random initial designs within ForLion algorithm}
+\title{Generate initial designs within ForLion algorithms}
 \usage{
 xmat_discrete_self(xlist, rowmax = NULL)
 }
 \arguments{
-\item{xlist}{a list of factor levels within ForLion algorithm, for example, a binary factor might be c(-1,1), a continuous factor within range of (25,45) will be c(25, 45).}
+\item{xlist}{a list of factor levels within ForLion algorithms, for example, a binary factor might be c(-1,1), a continuous factor within range of (25,45) will be c(25, 45).}
 
 \item{rowmax}{maximum number of rows of the design matrix}
 }
@@ -15,7 +15,7 @@ xmat_discrete_self(xlist, rowmax = NULL)
 design matrix of all possible combinations of discrete factors levels with min and max of the continuous factors.
 }
 \description{
-Generate GLM random initial designs within ForLion algorithm
+Generate initial designs within ForLion algorithms
 }
 \examples{
 #define list of factor levels for one continuous factor, four binary factors

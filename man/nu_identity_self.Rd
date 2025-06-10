@@ -2,7 +2,7 @@
 % Please edit documentation in R/nu_identity_self.R
 \name{nu_identity_self}
 \alias{nu_identity_self}
-\title{Function to calculate w = nu(eta) given eta for identity link}
+\title{function to calculate w = nu(eta) given eta for identity link}
 \usage{
 nu_identity_self(x)
 }
@@ -13,7 +13,7 @@ nu_identity_self(x)
 A numeric vector representing the diagonal elements of the W matrix (nu(eta)).
 }
 \description{
-Function to calculate w = nu(eta) given eta for identity link
+function to calculate w = nu(eta) given eta for identity link
 }
 \examples{
 eta = c(1,2,3,4)

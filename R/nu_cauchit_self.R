@@ -1,6 +1,6 @@
 #' function to calculate w = nu(eta) given eta for cauchit link
 #'
-#' @param x a list of eta - X*beta
+#' @param x a list of eta = X*beta
 #'
 #' @return diagonal element of W matrix which is nu(eta)
 #' @export

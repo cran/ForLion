@@ -5,6 +5,7 @@
 #' Continuous factors first then discrete factors, model parameters should in the same order of factors.
 #' @param n.factor vector of numbers of distinct levels, "0" indicates continuous factors, "0"s always come first, "2" or above indicates discrete factor, "1" is not allowed
 #' @param factor.level list of distinct levels, (min, max) for continuous factor, continuous factors first, should be the same order as n.factor
+#' @param xlist_fix the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables
 #' @param hfunc function for obtaining model matrix h(y) for given design point y, y has to follow the same order as n.factor
 #' @param bvec assumed parameter values of model parameters beta, same length of h(y)
 #' @param link link function, default "logit", other links: "probit", "cloglog", "loglog", "cauchit", "log", "identity"
@@ -34,13 +35,13 @@
 #' factor.level.temp = list(c(25,45),c(-1,1),c(-1,1),c(-1,1),c(-1,1))
 #' link.temp="logit"
 #' b.temp = c(0.3197169,  1.9740922, -0.1191797, -0.2518067,  0.1970956,  0.3981632, -7.6648090)
-#' ForLion_GLM_Optimal(n.factor=n.factor.temp, factor.level=factor.level.temp, hfunc=hfunc.temp,
-#' bvec=b.temp, link=link.temp, reltol=1e-2, rel.diff=0.03, maxit=500, random=FALSE,
-#' nram=3, logscale=TRUE)
+#' ForLion_GLM_Optimal(n.factor=n.factor.temp, factor.level=factor.level.temp, xlist_fix=NULL,
+#' hfunc=hfunc.temp, bvec=b.temp, link=link.temp, reltol=1e-2, rel.diff=0.03, maxit=500,
+#' random=FALSE,nram=3, logscale=TRUE)
 #'
 
 
-ForLion_GLM_Optimal <- function(n.factor, factor.level, hfunc, bvec, link, reltol=1e-5, rel.diff=0, maxit=100, random=FALSE, nram=3, logscale=FALSE, rowmax=NULL, Xini=NULL) {
+ForLion_GLM_Optimal <- function(n.factor, factor.level,xlist_fix=NULL, hfunc, bvec, link, reltol=1e-5, rel.diff=0, maxit=100, random=FALSE, nram=3, logscale=FALSE, rowmax=NULL, Xini=NULL) {
   d.factor=length(n.factor);             # number of factors
   p.factor=length(bvec);                 # number of predictors
   k.continuous=sum(n.factor==0);         # number of continuous factors
@@ -80,10 +81,10 @@ ForLion_GLM_Optimal <- function(n.factor, factor.level, hfunc, bvec, link, relto
   if(k.continuous==d.factor) {
     lvec=uvec=rep(0, d.factor);     # lower bounds and upper bounds for continuous factors
     for(i in 1:d.factor) {lvec[i]=min(factor.level[[i]]); uvec[i]=max(factor.level[[i]]);};
-    if(is.null(Xini)) xtemp=xmat_discrete_self(factor.level, rowmax=rowmax) else xtemp=Xini;
+    if(is.null(Xini)){initial.temp=design_initial_self(k.continuous=k.continuous, factor.level=factor.level, MLM=FALSE, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec=bvec, link=link, h.func=hfunc, delta=reltol, epsilon = reltol, maxit=maxit); xtemp=initial.temp$X} else {xtemp=Xini}  #no initial design
     if(k.continuous==1) m.design=length(xtemp) else m.design=nrow(xtemp);                   # initial number of design points
     X.mat = matrix(0, m.design, p.factor);  # initial model matrix X
-    w.vec = rep(0, m.design);     # w vector
+    w.vec = rep(0, m.design);               # w vector
     for(i in 1:m.design) {
       if(k.continuous==1)   htemp=Xw_maineffects_self(x=xtemp[i], b=bvec, link=link, h.func=hfunc) else {
         htemp=Xw_maineffects_self(x=xtemp[i,], b=bvec, link=link, h.func=hfunc);
@@ -136,31 +137,65 @@ ForLion_GLM_Optimal <- function(n.factor, factor.level, hfunc, bvec, link, relto
       if(2^py*dty > (py+1)*bty) {
         alphat=(2^py*dty - (py+1)*bty)/(py*(2^py*dty-2*bty));  # alpha_t
       };
-      dtemp=function(x) { sqrt(sum((hystar-x)^2)); };
-      atemp=apply(X.mat, 1, dtemp);
-      #merge in(ii)
-      if(min(atemp)<rel.diff) {   # merge "ystar" into its 1st neighbor
-        iy=which.min(atemp);                          # index of design point to be merged
-        p.design=(1-alphat)*p.design;
-        if(k.continuous==1) {
-          ystar1=(x.design[iy]*p.design[iy]+ystar*alphat)/(p.design[iy]+alphat);
-          x.design[iy]=ystar1;                           # update x.design
-        } else {
-          ystar1=(x.design[iy,]*p.design[iy]+ystar*alphat)/(p.design[iy]+alphat);  # merged design point
-          x.design[iy,]=ystar1;                           # update x.design
-        };
-        p.design[iy]=p.design[iy]+alphat;               # update p.design
-        hystar1=hfunc(ystar1);                          # update X.mat
-        X.mat[iy,]=hystar1;                             # update X.mat
-        w.vec[iy]=nutemp(sum(bvec*hystar1));            # update w.vec
-      } else {
-        if(k.continuous==1) x.design=c(x.design,ystar) else {
-          x.design=rbind(x.design,ystar);  # updated list of design points
-        };
-        X.mat=rbind(X.mat,hystar);    # add h(y) into design matrix
-        w.vec=c(w.vec,wstar);
-        p.design=c((1-alphat)*p.design, alphat);
-      };                            # end of "if(...reltol)"
+
+      #add new points to the design
+      if(k.continuous==1) x.design=c(x.design,ystar) else {
+        x.design=rbind(x.design,ystar);  # updated list of design points
+      };
+      X.mat=rbind(X.mat,hystar);    # add h(y) into design matrix
+      w.vec=c(w.vec,wstar);
+      p.design=c((1-alphat)*p.design, alphat);
+
+      #merging: calculate distance between design points, if min distance < tolerance merge
+      dtemp=as.matrix(stats::dist(x.design));
+      diag(dtemp)=Inf;
+      atemp=min(dtemp)
+      while((atemp<rel.diff)){ # merge closest two neighbors
+        #before merging two closest points, save the current state of the design
+        x.design_old=x.design
+        p.design_old=p.design
+        X.mat_old=X.mat
+        w.vec_old=w.vec
+
+        #identify and merge the two closest design points
+        i1=which.min(apply(dtemp,1,min)); # index of design point to be merged
+        i2=which.min(dtemp[i1,]); # index of design point to be merged
+        if(k.continuous==1){
+          ystar1=(p.design_old[i1]*x.design_old[i1]+p.design_old[i2]*x.design_old[i2])/(p.design_old[i1]+p.design_old[i2]); # merged design point
+          x.design_mer=c(x.design_old[-c(i1,i2)], ystar1)
+        }else{
+          ystar1=(p.design_old[i1]*x.design_old[i1,]+p.design_old[i2]*x.design_old[i2,])/(p.design_old[i1]+p.design_old[i2]); # merged design point
+          x.design_mer=rbind(x.design_old[-c(i1,i2), ], ystar1) # update x.design
+        }
+        hystar1=hfunc(ystar1);            # h(ystar1)
+        wstar1=nutemp(sum(bvec*hystar1)); # nu(beta^T h(y))
+
+        X.mat_mer=rbind(X.mat_old[-c(i1,i2), ],hystar1);    # add h(y) into design matrix
+        w.vec_mer=c(w.vec_old[-c(i1,i2)],wstar1);
+        p.design_mer=c(p.design_old[-c(i1,i2)], p.design_old[i1]+p.design_old[i2])
+
+        # Build X.mat_mer and calculate the Fisher information matrix (F.mat_mer)
+        F.mat_mer=det(t(X.mat_mer * (p.design_mer*w.vec_mer)) %*% X.mat_mer)
+
+        eigen_values<-eigen(F.mat_mer)
+        min_engenvalue<-min(eigen_values$values)
+        if(min_engenvalue<=reltol){
+          x.design=x.design_old
+          p.design=p.design_old
+          X.mat=X.mat_old
+          w.vec=w.vec_old
+          break
+        }else{
+          x.design=x.design_mer
+          p.design=p.design_mer
+          X.mat=X.mat_mer
+          w.vec=w.vec_mer
+        }
+        dtemp=as.matrix(stats::dist(x.design));
+        diag(dtemp)=Inf;
+        atemp=min(dtemp)
+      }
+
       if(logscale) optemp=liftoneDoptimal_log_GLM_func (X=X.mat, w=w.vec, reltol=reltol, maxit=maxit, random=random, nram=nram) else {
         optemp=liftoneDoptimal_GLM_func (X=X.mat, w=w.vec, reltol=reltol, maxit=maxit, random=random, nram=nram);
       };
@@ -204,7 +239,8 @@ ForLion_GLM_Optimal <- function(n.factor, factor.level, hfunc, bvec, link, relto
   if((k.continuous>0)&&(k.continuous<d.factor)) {
     lvec=uvec=rep(0, k.continuous);     # lower bounds and upper founds for continuous factors
     for(i in 1:k.continuous) {lvec[i]=min(factor.level[[i]]); uvec[i]=max(factor.level[[i]]);};
-    if(is.null(Xini)) xtemp=xmat_discrete_self(factor.level, rowmax=rowmax) else xtemp=Xini;
+    if(is.null(Xini)){initial.temp=design_initial_self(k.continuous=k.continuous, factor.level=factor.level, MLM=FALSE, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec=bvec, link=link, h.func=hfunc, delta=reltol, epsilon = reltol, maxit=maxit); xtemp=initial.temp$X} else {xtemp=Xini}  #no initial design
+    #if(is.null(Xini)) xtemp=xmat_discrete_self(factor.level, rowmax=rowmax) else xtemp=Xini;
     m.design=nrow(xtemp);                   # initial number of design points
     X.mat = matrix(0, m.design, p.factor);  # initial model matrix X
     w.vec = rep(0, m.design);     # w vector
@@ -224,7 +260,9 @@ ForLion_GLM_Optimal <- function(n.factor, factor.level, hfunc, bvec, link, relto
     w.vec = w.vec[optemp$p>0];    # updated w vector
     Dmat = t(X.mat * (p.design*w.vec)) %*% X.mat;    # X^T W X
     Amat = svd_inverse(Dmat);           # (X^T W X)^{-1}
-    xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
+    if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}
+    else{xdiscrete=xlist_fix;}
+    # xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
     ndiscrete=dim(xdiscrete)[1];
     for(idiscrete in 1:ndiscrete) {
       hfunc1 <- function(y) { hfunc(c(y, xdiscrete[idiscrete,])); };
@@ -267,23 +305,61 @@ ForLion_GLM_Optimal <- function(n.factor, factor.level, hfunc, bvec, link, relto
       if(2^py*dty > (py+1)*bty) {
         alphat=(2^py*dty - (py+1)*bty)/(py*(2^py*dty-2*bty));  # alpha_t
       };
-      dtemp=function(x) { sqrt(sum((hystar-x)^2)); };
-      atemp=apply(X.mat, 1, dtemp);
-      if(min(atemp)<rel.diff) {   # merge "ystar" into its 1st neighbor
-        iy=which.min(atemp);                          # index of design point to be merged
-        p.design=(1-alphat)*p.design;
-        ystar1=(x.design[iy,]*p.design[iy]+ystar*alphat)/(p.design[iy]+alphat);  # merged design point
-        x.design[iy,]=ystar1;                           # update x.design
-        p.design[iy]=p.design[iy]+alphat;               # update p.design
-        hystar1=hfunc(ystar1);                         # update X.mat
-        X.mat[iy,]=hystar1;                             # update X.mat
-        w.vec[iy]=nutemp(sum(bvec*hystar1));            # update w.vec
-      } else {
-        x.design=rbind(x.design,ystar);  # updated list of design points
-        X.mat=rbind(X.mat,hystar);    # add h(y) into design matrix
-        w.vec=c(w.vec,wstar);
-        p.design=c((1-alphat)*p.design, alphat);
-      };                            # end of "if(...reltol)"
+
+      #add new points to the design
+      x.design=rbind(x.design,ystar);  # updated list of design points
+      X.mat=rbind(X.mat,hystar);    # add h(y) into design matrix
+      w.vec=c(w.vec,wstar);
+      p.design=c((1-alphat)*p.design, alphat);
+
+      #merging: calculate distance between design points, if min distance < tolerance merge
+      dtemp=as.matrix(stats::dist(x.design));
+      diag(dtemp)=Inf;
+      atemp=min(dtemp)
+      while((atemp<rel.diff)){ # merge closest two neighbors
+        #before merging two closest points, save the current state of the design
+        x.design_old=x.design
+        p.design_old=p.design
+        X.mat_old=X.mat
+        w.vec_old=w.vec
+
+        #identify and merge the two closest design points
+        i1=which.min(apply(dtemp,1,min)); # index of design point to be merged
+        i2=which.min(dtemp[i1,]); # index of design point to be merged
+
+        ystar1=(p.design_old[i1]*x.design_old[i1,]+p.design_old[i2]*x.design_old[i2,])/(p.design_old[i1]+p.design_old[i2]); # merged design point
+        x.design_mer=rbind(x.design_old[-c(i1,i2), ], ystar1) # update x.design
+
+        hystar1=hfunc(ystar1);            # h(ystar1)
+        wstar1=nutemp(sum(bvec*hystar1)); # nu(beta^T h(y))
+
+        X.mat_mer=rbind(X.mat_old[-c(i1,i2), ],hystar1);    # add h(y) into design matrix
+        w.vec_mer=c(w.vec_old[-c(i1,i2)],wstar1);
+        p.design_mer=c(p.design_old[-c(i1,i2)], p.design_old[i1]+p.design_old[i2])
+
+        # Build X.mat_mer and calculate the Fisher information matrix (F.mat_mer)
+        F.mat_mer=det(t(X.mat_mer * (p.design_mer*w.vec_mer)) %*% X.mat_mer)
+
+        eigen_values<-eigen(F.mat_mer)
+        min_engenvalue<-min(eigen_values$values)
+
+        if(min_engenvalue<=reltol){
+          x.design=x.design_old
+          p.design=p.design_old
+          X.mat=X.mat_old
+          w.vec=w.vec_old
+          break
+        }else{
+          x.design=x.design_mer
+          p.design=p.design_mer
+          X.mat=X.mat_mer
+          w.vec=w.vec_mer
+        }
+        dtemp=as.matrix(stats::dist(x.design));
+        diag(dtemp)=Inf;
+        atemp=min(dtemp)
+      }
+
       if(logscale) optemp=liftoneDoptimal_log_GLM_func (X=X.mat, w=w.vec, reltol=reltol, maxit=maxit, random=random, nram=nram) else {
         optemp=liftoneDoptimal_GLM_func (X=X.mat, w=w.vec, reltol=reltol, maxit=maxit, random=random, nram=nram);
       };

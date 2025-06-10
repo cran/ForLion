@@ -2,13 +2,15 @@
 % Please edit documentation in R/EW_Xw_maineffects_self.R
 \name{EW_Xw_maineffects_self}
 \alias{EW_Xw_maineffects_self}
-\title{function for calculating X=h(x) and E_w=E(nu(beta^T h(x))) give a design point x=(1,x1,...,xd)^T}
+\title{function for calculating X=h(x) and E_w=E(nu(beta^T h(x))) given a design point x=(1,x1,...,xd)^T}
 \usage{
 EW_Xw_maineffects_self(
   x,
+  Integral_based,
   joint_Func_b,
   Lowerbounds,
   Upperbounds,
+  b_matrix,
   link = "logit",
   h.func = NULL
 )
@@ -16,11 +18,15 @@ EW_Xw_maineffects_self(
 \arguments{
 \item{x}{x=(x1,...,xd) -- design point/experimental setting}
 
+\item{Integral_based}{TRUE or FALSE, if TRUE then we will find the integral-based EW D-optimality otherwise we will find the sample-based EW D-optimality}
+
 \item{joint_Func_b}{The prior joint probability distribution of the parameters}
 
 \item{Lowerbounds}{The lower limit of the prior distribution for each parameter}
 
 \item{Upperbounds}{The upper limit of the prior distribution for each parameter}
+
+\item{b_matrix}{The matrix of the sampled parameter values of beta}
 
 \item{link}{link = "logit"  -- link function, default: "logit", other links: "probit", "cloglog", "loglog", "cauchit", "log"}
 
@@ -34,7 +40,7 @@ E_w -- E(nu(b^t h(x)))
 link -- link function applied
 }
 \description{
-function for calculating X=h(x) and E_w=E(nu(beta^T h(x))) give a design point x=(1,x1,...,xd)^T
+function for calculating X=h(x) and E_w=E(nu(beta^T h(x))) given a design point x=(1,x1,...,xd)^T
 }
 \examples{
 hfunc.temp = function(y) {c(y,1);};   # y -> h(y)=(y1,y2,y3,1)
@@ -53,6 +59,7 @@ d4 <- stats::dnorm(x[4], mean = mu0, sd = sigma0)
 return(d1 * d2 * d3 * d4)
 }
 x.temp = c(2,1,3)
-EW_Xw_maineffects_self(x=x.temp,joint_Func_b=gjoint_b, Lowerbounds=paras_lowerbound,
- Upperbounds=paras_upperbound, link=link.temp, h.func=hfunc.temp)
+EW_Xw_maineffects_self(x=x.temp,Integral_based=TRUE,joint_Func_b=gjoint_b,
+Lowerbounds=paras_lowerbound,Upperbounds=paras_upperbound, link=link.temp,
+h.func=hfunc.temp)
 }

@@ -8,11 +8,11 @@
 #' @param nram When random == TRUE, the function will generate nram number of initial points, default is 3
 #' @param p00 Specified initial design approximate allocation; default to be NULL, this will generate a random initial design
 #'
-#' @return p D-optimal approximate allocation
-#' @return p0 Initial approximate allocation that derived the reported D-optimal approximate allocation
-#' @return Maximum The maximum of the determinant of the Fisher information matrix of the reported D-optimla design
-#' @return convergence Convergence TRUE or FALSE
-#' @return itmax number of the iteration
+#' @return p               D-optimal approximate allocation
+#' @return p0              Initial approximate allocation that derived the reported D-optimal approximate allocation
+#' @return Maximum The     maximum of the determinant of the expected Fisher information matrix of the reported D-optimla design
+#' @return convergence     Convergence TRUE or FALSE
+#' @return itmax           number of the iteration
 #' @export
 #'
 #' @examples

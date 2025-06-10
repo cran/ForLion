@@ -1,4 +1,5 @@
 #' SVD Inverse Of A Square Matrix
+#' @description
 #' This function returns the inverse of a matrix using singular value decomposition.
 #' If the matrix is a square matrix, this should be equivalent to using the solve function.
 #' If the matrix is not a square matrix, then the result is the Moore-Penrose pseudo inverse.

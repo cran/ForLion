@@ -2,7 +2,7 @@
 #'
 #' @param x x=(x1,...,xd) -- design point/experimental setting
 #' @param b b=(b1,...,bp) -- assumed parameter values
-#' @param link link = "logit"  -- link function, default: "logit", other links: "probit", "cloglog", "loglog", "cauchit", "log"
+#' @param link link = "logit"  -- link function, default: "logit", other links: "probit", "cloglog", "loglog", "cauchit", "log", and "identity"
 #' @param h.func function h(x)=(h1(x),...,hp(x)), default (1,x1,...,xd)
 #'
 #' @return X=h(x)=(h1(x),...,hp(x)) -- a row for design matrix

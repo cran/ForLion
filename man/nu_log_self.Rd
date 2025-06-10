@@ -2,7 +2,7 @@
 % Please edit documentation in R/nu_log_self.R
 \name{nu_log_self}
 \alias{nu_log_self}
-\title{Function to calculate w = nu(eta) given eta for log link}
+\title{function to calculate w = nu(eta) given eta for log link}
 \usage{
 nu_log_self(x)
 }
@@ -13,7 +13,7 @@ nu_log_self(x)
 A numeric vector representing the diagonal elements of the W matrix (nu(eta)).
 }
 \description{
-Function to calculate w = nu(eta) given eta for log link
+function to calculate w = nu(eta) given eta for log link
 }
 \examples{
 eta = c(1,2,3,4)

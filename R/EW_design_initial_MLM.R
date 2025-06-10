@@ -1,10 +1,11 @@
-#' function to generate random initial design with design points and the approximate allocation (For EW)
+#' function to generate a initial EW Design for multinomial logistic models
 #'
 #' @param k.continuous number of continuous variables
 #' @param factor.level lower, upper limit of continuous variables, and discrete levels of categorical variables, continuous factors come first
+#' @param xlist_fix the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables
 #' @param lvec lower limit of continuous variables
 #' @param uvec upper limit of continuous variables
-#' @param bvec_matrix the matrix of the bootstrap parameter values of beta
+#' @param bvec_matrix the matrix of the sampled parameter values of beta
 #' @param h.func function, is used to transfer the design point to model matrix (e.g. add interaction term, add intercept)
 #' @param link link function, default "continuation", other options "baseline", "adjacent" and "cumulative"
 #' @param EW_Fi.func function, is used to calculate the Expectation of Fisher information for a design point - default to be EW_Fi_MLM_func() in the package
@@ -12,9 +13,9 @@
 #' @param epsilon determining f.det > 0 numerically, f.det <= epsilon will be considered as f.det <= 0
 #' @param maxit maximum number of iterations
 #'
-#' @return X matrix of initial design point
-#' @return p0 initial random approximate allocation
-#' @return f.det the determinant of Fisher information matrix for the random initial design
+#' @return X        matrix of initial design point
+#' @return p0       initial random approximate allocation
+#' @return f.det    the determinant of the expected Fisher information matrix for the initial design.
 #' @export
 #'
 #' @examples
@@ -31,19 +32,20 @@
 #'                          -0.0535, -0.0274, -0.0096,-0.0291, -0.04,
 #'                           0.0004,  0.0003,  0.0002,  0.0003,  0.1,
 #'                          -9.2154, -9.7576, -9.6818, -8.5139, -8.56),nrow=4,byrow=TRUE)
-#' EW_design_initial_self(k.continuous=k.continuous.temp, factor.level=n.factor.temp, lvec=lvec.temp,
-#' uvec=uvec.temp, bvec_matrix=bvec_bootstrap, h.func=hfunc.temp, link=link.temp)
+#' EW_design_initial_MLM(k.continuous=k.continuous.temp, factor.level=n.factor.temp,xlist_fix=NULL,
+#' lvec=lvec.temp,uvec=uvec.temp, bvec_matrix=bvec_bootstrap, h.func=hfunc.temp, link=link.temp)
 
 
 
 
-EW_design_initial_self<- function(k.continuous, factor.level, lvec, uvec, bvec_matrix, h.func,link="continuation", EW_Fi.func=EW_Fi_MLM_func, delta=1e-6, epsilon=1e-12, maxit=1000){
+EW_design_initial_MLM<- function(k.continuous, factor.level, xlist_fix=NULL, lvec, uvec, bvec_matrix, h.func,link="continuation", EW_Fi.func=EW_Fi_MLM_func, delta=1e-6, epsilon=1e-12, maxit=1000){
   d.rv = length(factor.level) #number of variables
   if(k.continuous > 0 && (d.rv-k.continuous) > 0){ #mixed case
     #generate initial continuous uniform r.v for continuous variables
     continuous.var = stats::runif(k.continuous, min=lvec, max=uvec)
     #generate initial discrete uniform r.v. for categorical variables
-    categorical.var = discrete_rv_self(d.rv-k.continuous, factor.level[k.continuous+1:d.rv])
+    if(is.null(xlist_fix)){categorical.var = discrete_rv_self(d.rv-k.continuous, factor.level[k.continuous+1:d.rv])}
+    else{categorical.var = xlist_fix[sample(nrow(xlist_fix),size=1,replace=TRUE),]}
     x = c(continuous.var, categorical.var) #combine the initial point so it has d variables
   }
   # if(k.continuous == 0){ #discrete case
@@ -67,7 +69,8 @@ EW_design_initial_self<- function(k.continuous, factor.level, lvec, uvec, bvec_m
       #generate initial continuous uniform r.v for continuous variables
       continuous.var = stats::runif(k.continuous, min=lvec, max=uvec)
       #generate initial discrete uniform r.v. for categorical variables
-      categorical.var = discrete_rv_self(d.rv-k.continuous, factor.level[k.continuous+1:d.rv])
+      if(is.null(xlist_fix)){categorical.var = discrete_rv_self(d.rv-k.continuous, factor.level[k.continuous+1:d.rv])}
+      else{categorical.var = xlist_fix[sample(nrow(xlist_fix),size=1,replace=TRUE),]}
       new.point = c(continuous.var, categorical.var) #combine the initial point so it has d variables
     }
     # if(k.continuous == 0){ #discrete case
@@ -82,17 +85,24 @@ EW_design_initial_self<- function(k.continuous, factor.level, lvec, uvec, bvec_m
     }
     dist = rep(0, m0)
     for(j in 1:m0){
-      dist[j] = sqrt(sum((x[j] - new.point)^2))
+      if(d.rv==1){dist[j] = sqrt(sum((x[j] - new.point)^2))}
+      else{
+        if(m0==1){dist[j]=sqrt(sum((x - new.point)^2))}
+        else{
+          dist[j] = sqrt(sum((x[j, ] - new.point)^2))}
+      }
     }
     #if new point meets the requirements, append to x matrix, update f.det; if not skip
     if(sum(dist < delta)==0){
       m0 = m0+1
-      x = rbind(x, new.point) #add new row of design points
+      if(d.rv==1){x = c(x, new.point)}else{x = rbind(x, new.point)}
+      #x = rbind(x, new.point) #add new row of design points
       p0 = rep(1/m0,m0) #generate approx design as exp r.v.
       #update f.det
       sum.f = 0
       for(i in 1:m0){
-        Fi = EW_Fi.func(h.func(x[i, ]), bvec_matrix, link)
+        if(d.rv==1){Fi = EW_Fi.func(h.func(x[i]), bvec_matrix=bvec_matrix, link=link)}
+        else{ Fi = EW_Fi.func(h.func(x[i, ]), bvec_matrix=bvec_matrix, link=link)}
         sum.f = sum.f + p0[i]*Fi$F_x
       } #end of for loop
       f.det = det(sum.f)
@@ -100,7 +110,8 @@ EW_design_initial_self<- function(k.continuous, factor.level, lvec, uvec, bvec_m
     iter = iter + 1
   } #end of while loop
 
-  X = x[do.call(order, as.data.frame(x)), ]
+  if(d.rv==1){X = x[do.call(order, as.data.frame(x))]}else
+  {X = x[do.call(order, as.data.frame(x)), ]}
   #generate approx design as exp r.v.
   #exp.rv = rexp(m0)
   #p0 = exp.rv / sum(exp.rv)

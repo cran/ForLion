@@ -2,7 +2,7 @@
 % Please edit documentation in R/print.design_output.R
 \name{print.design_output}
 \alias{print.design_output}
-\title{Print Method for Design Output from ForLion Algorithm}
+\title{Print Method for Design Output from ForLion Algorithms}
 \usage{
 \method{print}{design_output}(x, ...)
 }

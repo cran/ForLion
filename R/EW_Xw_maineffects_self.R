@@ -1,6 +1,8 @@
-#' function for calculating X=h(x) and E_w=E(nu(beta^T h(x))) give a design point x=(1,x1,...,xd)^T
+#' function for calculating X=h(x) and E_w=E(nu(beta^T h(x))) given a design point x=(1,x1,...,xd)^T
 #'
 #' @param x            x=(x1,...,xd) -- design point/experimental setting
+#' @param Integral_based TRUE or FALSE, if TRUE then we will find the integral-based EW D-optimality otherwise we will find the sample-based EW D-optimality
+#' @param b_matrix     The matrix of the sampled parameter values of beta
 #' @param joint_Func_b The prior joint probability distribution of the parameters
 #' @param Lowerbounds  The lower limit of the prior distribution for each parameter
 #' @param Upperbounds  The upper limit of the prior distribution for each parameter
@@ -29,13 +31,15 @@
 #' return(d1 * d2 * d3 * d4)
 #' }
 #' x.temp = c(2,1,3)
-#' EW_Xw_maineffects_self(x=x.temp,joint_Func_b=gjoint_b, Lowerbounds=paras_lowerbound,
-#'  Upperbounds=paras_upperbound, link=link.temp, h.func=hfunc.temp)
+#' EW_Xw_maineffects_self(x=x.temp,Integral_based=TRUE,joint_Func_b=gjoint_b,
+#' Lowerbounds=paras_lowerbound,Upperbounds=paras_upperbound, link=link.temp,
+#' h.func=hfunc.temp)
 
 
-EW_Xw_maineffects_self <- function(x,joint_Func_b,Lowerbounds, Upperbounds,link="logit", h.func=NULL) {
+EW_Xw_maineffects_self <- function(x,Integral_based,joint_Func_b,Lowerbounds, Upperbounds,b_matrix,link="logit", h.func=NULL) {
   if(is.null(h.func)) h.func = function(y) {c(1,y);}; # default: main-effects
   xrow = h.func(x);
+  if(Integral_based==TRUE){
   integrand_w<-function(b){
     eta = sum(b*xrow);
     w = NULL ;
@@ -49,5 +53,20 @@ EW_Xw_maineffects_self <- function(x,joint_Func_b,Lowerbounds, Upperbounds,link=
   }
   result <- cubature::hcubature(f = integrand_w,lowerLimit = Lowerbounds,upperLimit = Upperbounds, tol = 1e-4,maxEval = 1e4)
   Ew<-result$integral
+}else{
+  nsa=dim(b_matrix)[1] #nsa: the number of bootstrap parameters
+  w = rep(0,nsa);
+  for(i in 1:nsa){
+  b=b_matrix[i, ]
+  eta = sum(b*xrow);
+  if(link=="probit") w[i] = nu_probit_self(eta);
+  if(link=="cloglog") w[i] = nu_loglog_self(eta);
+  if(link=="loglog") w[i] = nu_loglog_self(eta);
+  if(link=="cauchit") w[i] = nu_cauchit_self(eta);
+  if(link=="log") w[i] = nu_log_self(eta);
+  if(link=="logit") w[i]=nu_logit_self(eta);
+  }
+  Ew=mean(w,na.rm = TRUE)
+}
   list(X=xrow, E_w=Ew, link=link);
 }

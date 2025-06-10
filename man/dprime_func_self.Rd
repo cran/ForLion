@@ -2,7 +2,7 @@
 % Please edit documentation in R/dprime_func_self.R
 \name{dprime_func_self}
 \alias{dprime_func_self}
-\title{Function to calculate du/dx in the gradient of d(x, Xi), will be used in ForLion_MLM_func() function, details see Appendix C in Huang, Li, Mandal, Yang (2024)}
+\title{function to calculate du/dx in the gradient of d(x, Xi), will be used in ForLion_MLM_func() function, details see Appendix C in Huang, Li, Mandal, Yang (2024)}
 \usage{
 dprime_func_self(
   xi,
@@ -36,5 +36,5 @@ dprime_func_self(
 dU/dx in the gradient of sensitivity function d(x, Xi)
 }
 \description{
-Function to calculate du/dx in the gradient of d(x, Xi), will be used in ForLion_MLM_func() function, details see Appendix C in Huang, Li, Mandal, Yang (2024)
+function to calculate du/dx in the gradient of d(x, Xi), will be used in ForLion_MLM_func() function, details see Appendix C in Huang, Li, Mandal, Yang (2024)
 }

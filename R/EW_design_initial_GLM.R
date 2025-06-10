@@ -1,73 +1,35 @@
-#' function to generate initial design with design points and the approximate allocation
+#' function to generate a initial EW Design for generalized linear models
+#'
 #' @param k.continuous number of continuous variables
 #' @param factor.level lower, upper limit of continuous variables, and discrete levels of categorical variables, continuous factors come first
-#' @param MLM TRUE or FALSE, TRUE: generate initial design for multinomial logistic model, FALSE: generate initial design for generalized linear model
+#' @param Integral_based TRUE or FALSE, if TRUE then we will find the integral-based EW D-optimality otherwise we will find the sample-based EW D-optimality
+#' @param b_matrix     The matrix of the sampled parameter values of beta
+#' @param joint_Func_b The prior joint probability distribution of the parameters
+#' @param Lowerbounds The lower limit of the prior distribution for each parameter
+#' @param Upperbounds The upper limit of the prior distribution for each parameter
 #' @param xlist_fix the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables
 #' @param lvec lower limit of continuous variables
 #' @param uvec upper limit of continuous variables
-#' @param bvec assumed parameter values of beta
-#' @param link link function, default "continuation", other options "baseline", "adjacent" and "cumulative"
 #' @param h.func function, is used to transfer the design point to model matrix (e.g. add interaction term, add intercept)
-#' @param Fi.func function, is used to calculate Fisher inforamtion for a design point - default to be Fi_MLM_func() in the package
+#' @param link link function, default "continuation", other options "baseline", "adjacent" and "cumulative"
 #' @param delta tuning parameter, the distance threshold, || x_i(0) - x_j(0) || >= delta
-#' @param epsilon or determining f.det > 0 numerically, f.det <= epsilon will be considered as f.det <= 0
+#' @param epsilon determining f.det > 0 numerically, f.det <= epsilon will be considered as f.det <= 0
 #' @param maxit maximum number of iterations
 #'
-#' @return X      matrix of initial design point
-#' @return p0     initial random approximate allocation
-#' @return f.det  the determinant of Fisher information matrix for the initial design
+#' @return X        matrix of initial design point
+#' @return p0       initial random approximate allocation
+#' @return f.det    the determinant of the expected Fisher information matrix for the initial design
 #' @export
 #'
-#' @examples
-#' k.continuous.temp=5
-#' link.temp = "cumulative"
-#' n.factor.temp = c(0,0,0,0,0,2)  # 1 discrete factor w/ 2 levels + 5 continuous
-#' ## Note: Always put continuous factors ahead of discrete factors,
-#' ## pay attention to the order of coefficients paring with predictors
-#' lvec.temp = c(-25,-200,-150,-100,0,-1)
-#' uvec.temp = c(25,200,0,0,16,1)
-#' hfunc.temp = function(y){
-#' if(length(y) != 6){stop("Input should have length 6");}
-#'  model.mat = matrix(NA, nrow=5, ncol=10, byrow=TRUE)
-#'  model.mat[5,]=0
-#'  model.mat[1:4,1:4] = diag(4)
-#'  model.mat[1:4, 5] =((-1)*y[6])
-#'  model.mat[1:4, 6:10] = matrix(((-1)*y[1:5]), nrow=4, ncol=5, byrow=TRUE)
-#'  return(model.mat)
-#'  }
-#' bvec.temp=c(-1.77994301, -0.05287782,  1.86852211, 2.76330779, -0.94437464, 0.18504420,
-#' -0.01638597, -0.03543202, -0.07060306, 0.10347917)
-#'
-#' design_initial_self(k.continuous=k.continuous.temp, factor.level=n.factor.temp,
-#' MLM=TRUE,xlist_fix=NULL, lvec=lvec.temp,uvec=uvec.temp, bvec=bvec.temp,
-#' h.func=hfunc.temp,link=link.temp)
-#'
-#'
 
-
-design_initial_self = function(k.continuous, factor.level, MLM, xlist_fix=NULL, lvec, uvec, bvec, h.func, link="continuation", Fi.func=Fi_MLM_func, delta=1e-6, epsilon=1e-12, maxit=1000){
-  ## function to generate initial design x_i^(0) and w_i^(0) #update 2022/08/28
-  ## input:
-  ##        k.continuous: number of continuous variables
-  ##        factor.level: lower, upper limit of continuous variables, and discrete levels of categorical variables
-  ##        lvec: lower limit of continuous variables
-  ##        uvec: upper limit of continuous variables
-  ##        bvec: assumed parameter values of beta, same length of h(y)
-  ##        link: link function, default "continuation"
-  ##        h.func: function, is used to transfer the design matrix to model matrix (e.g. add interaction term, add intercept)
-  ##        Fi.func: function, is used to calculate rowwise fisher information Fi
-  ##        delta: tuning parameter, the distance threshold, || x_i(0) - x_j(0) || >= delta
-  ##        epsilon: for determining f.det > 0 numerically, f.det <= epsilon will be considered as f.det <= 0
-  ## output:
-  ##        X: matrix of initial design points
-  ##        p0: initial approx design of X
+EW_design_initial_GLM<- function(k.continuous, factor.level, Integral_based, b_matrix, joint_Func_b,Lowerbounds, Upperbounds,xlist_fix=NULL, lvec, uvec, h.func,link="continuation", delta=1e-6, epsilon=1e-12, maxit=1000){
   d.rv = length(factor.level) #number of variables
   if(k.continuous > 0 && (d.rv-k.continuous) > 0){ #mixed case
     #generate initial continuous uniform r.v for continuous variables
     continuous.var = stats::runif(k.continuous, min=lvec, max=uvec)
     #generate initial discrete uniform r.v. for categorical variables
     if(is.null(xlist_fix)){categorical.var = discrete_rv_self(d.rv-k.continuous, factor.level[k.continuous+1:d.rv])}
-    else{categorical.var = xlist_fix[sample(nrow(xlist_fix),size=1,replace=TRUE),]} ##only apply for more than 1 fixed discrete
+    else{categorical.var = xlist_fix[sample(nrow(xlist_fix),size=1,replace=TRUE),]}
     x = c(continuous.var, categorical.var) #combine the initial point so it has d variables
   }
   # if(k.continuous == 0){ #discrete case
@@ -125,36 +87,42 @@ design_initial_self = function(k.continuous, factor.level, MLM, xlist_fix=NULL, 
       #x = rbind(x, new.point) #add new row of design points
       p0 = rep(1/m0,m0) #generate approx design as exp r.v.
       #update f.det
-      if(MLM==TRUE){
-      sum.f = 0
-      for(i in 1:m0){
-        if(d.rv==1){Fi = Fi.func(h.func(x[i]), bvec=bvec, link)}
-        else{ Fi = Fi.func(h.func(x[i, ]), bvec=bvec, link)}
-        sum.f = sum.f + (1/m0)*Fi$F_x
-      } #end of for loop
-      f.det = det(sum.f)
-      }else{
+      if(Integral_based==TRUE){
         if(d.rv==1){m.design=length(x)} else {m.design=nrow(x);}# initial number of design points
-        p.factor=length(bvec)
+        p.factor=length(Lowerbounds)
         X.mat = matrix(0, m.design, p.factor);  # initial model matrix X
-        w.vec = rep(0, m.design);     # w vector
+        E_w.vec = rep(0, m.design);     # E_w vector
         for(i in 1:m.design) {
-          if(d.rv==1) {htemp=Xw_maineffects_self(x=x[i], b=bvec, link=link, h.func=h.func)} else {
-            htemp=Xw_maineffects_self(x=x[i,], b=bvec, link=link, h.func=h.func);
+          if(d.rv==1) htemp=EW_Xw_maineffects_self(x=x[i],Integral_based=Integral_based,joint_Func_b=joint_Func_b,Lowerbounds=Lowerbounds, Upperbounds=Upperbounds,link=link, h.func=h.func) else {
+            htemp=EW_Xw_maineffects_self(x=x[i,],Integral_based=Integral_based,joint_Func_b=joint_Func_b, Lowerbounds=Lowerbounds, Upperbounds=Upperbounds, link=link, h.func=h.func);
           };
           X.mat[i,]=htemp$X;
-          w.vec[i]=htemp$w;
+          E_w.vec[i]=htemp$E_w;
         };
-        f.det=det(t(X.mat * (p0*w.vec)) %*% X.mat)    # X^T W X
+        f.det = det(t(X.mat * (p0*E_w.vec)) %*% X.mat)
+      }else{
+        if(d.rv==1){m.design=length(x)} else {m.design=nrow(x);}# initial number of design points
+        p.factor=dim(b_matrix)[2]
+        X.mat = matrix(0, m.design, p.factor);  # initial model matrix X
+        E_w.vec = rep(0, m.design);     # E_w vector
+        for(i in 1:m.design) {
+          if(d.rv==1)   htemp=EW_Xw_maineffects_self(x=x[i],Integral_based=Integral_based,b_matrix=b_matrix,link=link, h.func=h.func) else {
+            htemp=EW_Xw_maineffects_self(x=x[i,],Integral_based=Integral_based,b_matrix=b_matrix, link=link, h.func=h.func);
+          };
+          X.mat[i,]=htemp$X;
+          E_w.vec[i]=htemp$E_w;
+        };
+        f.det=det(t(X.mat * (p0*E_w.vec)) %*% X.mat)    # X^T W X
       }
     } #end of if
     iter = iter + 1
   } #end of while loop
 
-
-  #sort the order
   if(d.rv==1){X = x[do.call(order, as.data.frame(x))]}else
   {X = x[do.call(order, as.data.frame(x)), ]}
+  #generate approx design as exp r.v.
+  #exp.rv = rexp(m0)
+  #p0 = exp.rv / sum(exp.rv)
 
   list(X = X, p0 = p0, f.det=f.det)
 }#end of function

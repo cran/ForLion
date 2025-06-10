@@ -2,7 +2,7 @@
 % Please edit documentation in R/EW_dprime_func_self.R
 \name{EW_dprime_func_self}
 \alias{EW_dprime_func_self}
-\title{Function to calculate dEu/dx in the gradient of d(x, Xi), will be used in EW_ForLion_MLM_func() function}
+\title{function to calculate dEu/dx in the gradient of d(x, Xi), will be used in EW_ForLion_MLM_func() function}
 \usage{
 EW_dprime_func_self(
   xi,
@@ -36,5 +36,5 @@ EW_dprime_func_self(
 dEU/dx in the gradient of sensitivity function d(x, Xi)
 }
 \description{
-Function to calculate dEu/dx in the gradient of d(x, Xi), will be used in EW_ForLion_MLM_func() function
+function to calculate dEu/dx in the gradient of d(x, Xi), will be used in EW_ForLion_MLM_func() function
 }

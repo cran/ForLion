@@ -11,7 +11,7 @@ Xw_maineffects_self(x, b, link = "logit", h.func = NULL)
 
 \item{b}{b=(b1,...,bp) -- assumed parameter values}
 
-\item{link}{link = "logit"  -- link function, default: "logit", other links: "probit", "cloglog", "loglog", "cauchit", "log"}
+\item{link}{link = "logit"  -- link function, default: "logit", other links: "probit", "cloglog", "loglog", "cauchit", "log", and "identity"}
 
 \item{h.func}{function h(x)=(h1(x),...,hp(x)), default (1,x1,...,xd)}
 }

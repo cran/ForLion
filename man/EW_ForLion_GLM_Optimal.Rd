@@ -8,9 +8,12 @@ EW_ForLion_GLM_Optimal(
   n.factor,
   factor.level,
   hfunc,
+  Integral_based,
+  b_matrix,
   joint_Func_b,
   Lowerbounds,
   Upperbounds,
+  xlist_fix = NULL,
   link,
   reltol = 1e-05,
   rel.diff = 0,
@@ -30,11 +33,17 @@ EW_ForLion_GLM_Optimal(
 
 \item{hfunc}{function for obtaining model matrix h(y) for given design point y, y has to follow the same order as n.factor}
 
+\item{Integral_based}{TRUE or FALSE, if TRUE then we will find the integral-based EW D-optimality otherwise we will find the sample-based EW D-optimality}
+
+\item{b_matrix}{The matrix of the sampled parameter values of beta}
+
 \item{joint_Func_b}{The prior joint probability distribution of the parameters}
 
 \item{Lowerbounds}{The lower limit of the prior distribution for each parameter}
 
 \item{Upperbounds}{The upper limit of the prior distribution for each parameter}
+
+\item{xlist_fix}{the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables}
 
 \item{link}{link function, default "logit", other links: "probit", "cloglog", "loglog", "cauchit", "log", "identity"}
 
@@ -46,57 +55,58 @@ EW_ForLion_GLM_Optimal(
 
 \item{maxit}{the maximum number of iterations, default value 100}
 
-\item{random}{TRUE or FALSE, if TRUE then the function will run EW lift-one with additional "nram" number of random approximate allocation, default to be FALSE}
+\item{random}{TRUE or FALSE, if TRUE then the function will run lift-one with additional "nram" number of random approximate allocation, default to be FALSE}
 
-\item{nram}{when random == TRUE, the function will run EW lift-one nram number of initial proportion p00, default is 3}
+\item{nram}{when random == TRUE, the function will run lift-one nram number of initial proportion p00, default is 3}
 
-\item{logscale}{TRUE or FALSE, if TRUE then the EW ForLion will run EW lift-one with logscale, which is EW_liftoneDoptimal_log_GLM_func(); if FALSE then ForLion will run EW lift-one without logscale, which is EW_liftoneDoptimal_GLM_func()}
+\item{logscale}{TRUE or FALSE, if TRUE then the EW ForLion will run lift-one with logscale, which is EW_liftoneDoptimal_log_GLM_func(); if FALSE then ForLion will run EW lift-one without logscale, which is EW_liftoneDoptimal_GLM_func()}
 
 \item{rowmax}{maximum number of points in the initial design, default NULL indicates no restriction}
 
 \item{Xini}{initial list of design points, default NULL will generate random initial design points}
 }
 \value{
-m number of design points
+m             number of design points
 
-x.factor matrix with rows indicating design point
+x.factor      matrix with rows indicating design point
 
-p EW D-optimal approximate allocation
+p             EW D-optimal approximate allocation
 
-det Optimal determinant of Fisher information matrix
+det           Optimal determinant of the expected Fisher information matrix
 
-x.model model matrix X
+x.model       model matrix X
 
-E_w vector of E_w such that E_w=diag(p*E_w)
+E_w           vector of E_w such that E_w=diag(p*E_w)
 
-convergence TRUE or FALSE
+convergence   TRUE or FALSE
 
-min.diff the minimum Euclidean distance between design points
+min.diff      the minimum Euclidean distance between design points
 
-x.close  a pair of design points with minimum distance
+x.close       a pair of design points with minimum distance
 }
 \description{
-EW ForLion algorithm to find EW D-optimal design for GLM models with mixed factors, reference: .
+EW ForLion algorithm to find EW D-optimal design for GLM models with mixed factors.
+Reference Section 3 of Lin, Huang, Yang (2025).
 Factors may include discrete factors with finite number of distinct levels and continuous factors
 with specified interval range (min, max), continuous factors, if any, must serve as main-effects
 only, allowing merging points that are close enough.Continuous factors first then discrete factors,
  model parameters should in the same order of factors.
 }
 \examples{
-#Example  Crystallography Experiment
 hfunc.temp = function(y) {c(y,1)}   # y -> h(y)=(y1,1)
 n.factor.temp = c(0)  # 1 continuous factors
 factor.level.temp = list(c(-1,1))
 link.temp="logit"
-paras_lowerbound<-c(4,-3)
-paras_upperbound<-c(10,3)
+paras_lowerbound<-c(0,1)
+paras_upperbound<-c(1,-1)
  gjoint_b<- function(x) {
  Func_b<-1/(prod(paras_upperbound-paras_lowerbound))
  ##the prior distributions are follow uniform distribution
 return(Func_b)
 }
+set.seed(123)
 EW_ForLion_GLM_Optimal(n.factor=n.factor.temp, factor.level=factor.level.temp,
-hfunc=hfunc.temp,joint_Func_b=gjoint_b, Lowerbounds=paras_lowerbound,
-Upperbounds=paras_upperbound, link=link.temp, reltol=1e-2, rel.diff=0.01,
+hfunc=hfunc.temp,Integral_based=TRUE,joint_Func_b=gjoint_b, Lowerbounds=paras_lowerbound,
+Upperbounds=paras_upperbound, link=link.temp, reltol=1e-6, rel.diff=0.01,
 optim_grad=FALSE, maxit=500, random=FALSE, nram=3, logscale=FALSE,Xini=NULL)
 }

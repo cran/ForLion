@@ -2,10 +2,7 @@
 % Please edit documentation in R/svd_inverse.R
 \name{svd_inverse}
 \alias{svd_inverse}
-\title{SVD Inverse Of A Square Matrix
-This function returns the inverse of a matrix using singular value decomposition.
-If the matrix is a square matrix, this should be equivalent to using the solve function.
-If the matrix is not a square matrix, then the result is the Moore-Penrose pseudo inverse.}
+\title{SVD Inverse Of A Square Matrix}
 \usage{
 svd_inverse(x)
 }
@@ -16,7 +13,6 @@ svd_inverse(x)
 the inverse of the matrix x
 }
 \description{
-SVD Inverse Of A Square Matrix
 This function returns the inverse of a matrix using singular value decomposition.
 If the matrix is a square matrix, this should be equivalent to using the solve function.
 If the matrix is not a square matrix, then the result is the Moore-Penrose pseudo inverse.

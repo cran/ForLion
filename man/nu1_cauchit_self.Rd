@@ -2,7 +2,7 @@
 % Please edit documentation in R/nu1_cauchit_self.R
 \name{nu1_cauchit_self}
 \alias{nu1_cauchit_self}
-\title{Function to calculate first derivative of nu function given eta for cauchit link}
+\title{function to calculate first derivative of nu function given eta for cauchit link}
 \usage{
 nu1_cauchit_self(x)
 }
@@ -13,7 +13,7 @@ nu1_cauchit_self(x)
 the first derivative of nu function given eta for cauchit link
 }
 \description{
-Function to calculate first derivative of nu function given eta for cauchit link
+function to calculate first derivative of nu function given eta for cauchit link
 }
 \examples{
 eta = c(1,2,3,4)

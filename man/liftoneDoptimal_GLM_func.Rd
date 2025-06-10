@@ -30,15 +30,15 @@ liftoneDoptimal_GLM_func(
 \item{p00}{Specified initial design approximate allocation; default to be NULL, this will generate a random initial design}
 }
 \value{
-p D-optimal approximate allocation
+p              D-optimal approximate allocation
 
-p0 Initial approximate allocation that derived the reported D-optimal approximate allocation
+p0             Initial approximate allocation that derived the reported D-optimal approximate allocation
 
-Maximum The maximum of the determinant of the Fisher information matrix of the reported D-optimal design
+Maximum        The maximum of the determinant of the Fisher information matrix of the reported D-optimal design
 
-convergence Convergence TRUE or FALSE
+convergence    Convergence TRUE or FALSE
 
-itmax number of the iteration
+itmax          number of the iteration
 }
 \description{
 Lift-one algorithm for D-optimal approximate design
