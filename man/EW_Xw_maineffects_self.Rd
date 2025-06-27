@@ -20,13 +20,13 @@ EW_Xw_maineffects_self(
 
 \item{Integral_based}{TRUE or FALSE, if TRUE then we will find the integral-based EW D-optimality otherwise we will find the sample-based EW D-optimality}
 
-\item{joint_Func_b}{The prior joint probability distribution of the parameters}
+\item{joint_Func_b}{prior distribution function of model parameters}
 
-\item{Lowerbounds}{The lower limit of the prior distribution for each parameter}
+\item{Lowerbounds}{vector of lower ends of ranges of prior distribution for model parameters.}
 
-\item{Upperbounds}{The upper limit of the prior distribution for each parameter}
+\item{Upperbounds}{vector of upper ends of ranges of prior distribution for model parameters.}
 
-\item{b_matrix}{The matrix of the sampled parameter values of beta}
+\item{b_matrix}{matrix of bootstrapped or simulated parameter values.}
 
 \item{link}{link = "logit"  -- link function, default: "logit", other links: "probit", "cloglog", "loglog", "cauchit", "log"}
 

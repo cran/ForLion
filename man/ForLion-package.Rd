@@ -4,9 +4,9 @@
 \name{ForLion-package}
 \alias{ForLion}
 \alias{ForLion-package}
-\title{ForLion: 'ForLion' Algorithms to Find Optimal Experimental Designs with Mixed Factors}
+\title{ForLion: 'ForLion' Algorithm to Find D-Optimal Designs for Experiments}
 \description{
-Designing experimental plans that involve both discrete and continuous factors with general parametric statistical models using the 'ForLion' algorithm and 'EW ForLion' algorithm. The algorithms will search for locally optimal designs and EW optimal designs under the D-criterion. Reference: Huang, Y., Li, K., Mandal, A., & Yang, J., (2024)\doi{10.1007/s11222-024-10465-x}. Lin, S., Huang, Y., & Yang, J. (2025) \doi{10.48550/arXiv.2505.00629}.
+Designing experimental plans that involve both discrete and continuous factors with general parametric statistical models using the 'ForLion' algorithm and 'EW ForLion' algorithm. The algorithms will search for locally optimal designs and EW optimal designs under the D-criterion. Reference: Huang, Y., Li, K., Mandal, A., & Yang, J., (2024)\doi{10.1007/s11222-024-10465-x}.
 }
 \author{
 \strong{Maintainer}: Siting Lin \email{slin95@uic.edu}

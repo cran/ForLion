@@ -7,6 +7,7 @@
 EW_ForLion_GLM_Optimal(
   n.factor,
   factor.level,
+  var_names = NULL,
   hfunc,
   Integral_based,
   b_matrix,
@@ -16,8 +17,7 @@ EW_ForLion_GLM_Optimal(
   xlist_fix = NULL,
   link,
   reltol = 1e-05,
-  rel.diff = 0,
-  optim_grad = TRUE,
+  delta = 0,
   maxit = 100,
   random = FALSE,
   nram = 3,
@@ -27,31 +27,31 @@ EW_ForLion_GLM_Optimal(
 )
 }
 \arguments{
-\item{n.factor}{vector of numbers of distinct levels, "0" indicates continuous factors, "0"s always come first, "2" or above indicates discrete factor, "1" is not allowed}
+\item{n.factor}{vector of numbers of distinct levels, “0” indicating continuous factors that always come first, “2” or more for discrete factors, and “1” not allowed.}
 
-\item{factor.level}{list of distinct levels, (min, max) for continuous factor, continuous factors first, should be the same order as n.factor}
+\item{factor.level}{list of distinct factor levels, “(min, max)” for continuous factors that always come first, finite sets for discrete factors.}
 
-\item{hfunc}{function for obtaining model matrix h(y) for given design point y, y has to follow the same order as n.factor}
+\item{var_names}{Names for the design factors. Must have the same length asfactor.level. Defaults to "X1", "X2", ...}
 
-\item{Integral_based}{TRUE or FALSE, if TRUE then we will find the integral-based EW D-optimality otherwise we will find the sample-based EW D-optimality}
+\item{hfunc}{function for generating the corresponding model matrix or predictor vector, given an experimental setting or design point.}
 
-\item{b_matrix}{The matrix of the sampled parameter values of beta}
+\item{Integral_based}{TRUE or FALSE, whether or not integral-based EW D-optimality is used, FALSE indicates sample-based EW D-optimality is used.}
 
-\item{joint_Func_b}{The prior joint probability distribution of the parameters}
+\item{b_matrix}{matrix of bootstrapped or simulated parameter values.}
 
-\item{Lowerbounds}{The lower limit of the prior distribution for each parameter}
+\item{joint_Func_b}{prior distribution function of model parameters}
 
-\item{Upperbounds}{The upper limit of the prior distribution for each parameter}
+\item{Lowerbounds}{vector of lower ends of ranges of prior distribution for model parameters.}
 
-\item{xlist_fix}{the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables}
+\item{Upperbounds}{vector of upper ends of ranges of prior distribution for model parameters.}
+
+\item{xlist_fix}{list of discrete factor experimental settings under consideration, default NULL indicating a list of all possible discrete factor experimental settings will be used.}
 
 \item{link}{link function, default "logit", other links: "probit", "cloglog", "loglog", "cauchit", "log", "identity"}
 
 \item{reltol}{the relative convergence tolerance, default value 1e-5}
 
-\item{rel.diff}{points with distance less than that will be merged, default value 0}
-
-\item{optim_grad}{TRUE or FALSE, default is FALSE, whether to use the analytical gradient function or numerical gradient for searching optimal new design point}
+\item{delta}{relative difference as merging threshold for the merging step, the distance of two points less than delta may be merged, default 0, can be different from delta0 for the initial design.}
 
 \item{maxit}{the maximum number of iterations, default value 100}
 
@@ -59,11 +59,11 @@ EW_ForLion_GLM_Optimal(
 
 \item{nram}{when random == TRUE, the function will run lift-one nram number of initial proportion p00, default is 3}
 
-\item{logscale}{TRUE or FALSE, if TRUE then the EW ForLion will run lift-one with logscale, which is EW_liftoneDoptimal_log_GLM_func(); if FALSE then ForLion will run EW lift-one without logscale, which is EW_liftoneDoptimal_GLM_func()}
+\item{logscale}{TRUE or FALSE, whether or not to run the lift-one step in log-scale, i.e., using EW_liftoneDoptimal_log_GLM_func() or EW_liftoneDoptimal_GLM_func()}
 
 \item{rowmax}{maximum number of points in the initial design, default NULL indicates no restriction}
 
-\item{Xini}{initial list of design points, default NULL will generate random initial design points}
+\item{Xini}{initial list of design points, default NULL indicating automatically generating an initial list of design points.}
 }
 \value{
 m             number of design points
@@ -93,20 +93,20 @@ only, allowing merging points that are close enough.Continuous factors first the
  model parameters should in the same order of factors.
 }
 \examples{
+#Example  Crystallography Experiment
 hfunc.temp = function(y) {c(y,1)}   # y -> h(y)=(y1,1)
 n.factor.temp = c(0)  # 1 continuous factors
 factor.level.temp = list(c(-1,1))
 link.temp="logit"
-paras_lowerbound<-c(0,1)
-paras_upperbound<-c(1,-1)
+paras_lowerbound<-c(4,-3)
+paras_upperbound<-c(10,3)
  gjoint_b<- function(x) {
  Func_b<-1/(prod(paras_upperbound-paras_lowerbound))
  ##the prior distributions are follow uniform distribution
 return(Func_b)
 }
-set.seed(123)
 EW_ForLion_GLM_Optimal(n.factor=n.factor.temp, factor.level=factor.level.temp,
 hfunc=hfunc.temp,Integral_based=TRUE,joint_Func_b=gjoint_b, Lowerbounds=paras_lowerbound,
-Upperbounds=paras_upperbound, link=link.temp, reltol=1e-6, rel.diff=0.01,
-optim_grad=FALSE, maxit=500, random=FALSE, nram=3, logscale=FALSE,Xini=NULL)
+Upperbounds=paras_upperbound, link=link.temp, reltol=1e-4, delta=0.01,
+maxit=500, random=FALSE, nram=3, logscale=FALSE,Xini=NULL)
 }

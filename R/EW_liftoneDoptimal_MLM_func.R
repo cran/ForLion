@@ -9,8 +9,8 @@
 #' @param reltol relative tolerance for convergence, default to 1e-5
 #' @param maxit the number of maximum iteration, default to 500
 #' @param p00 specified initial approximate allocation, default to NULL, if NULL, will generate a random initial approximate allocation
-#' @param random TRUE or FALSE, if TRUE then the function will run with additional "nram" number of initial allocation p00, default to be TRUE
-#' @param nram when random == TRUE, the function will generate nram number of initial points, default is 3
+#' @param random TRUE or FALSE, if TRUE then the function will run lift-one with additional "nram" number of random approximate allocation, default to be FALSE
+#' @param nram when random == TRUE, the function will run lift-one nram number of initial proportion p00, default is 3
 #'
 #' @return p              reported EW D-optimal approximate allocation
 #' @return p0             the initial approximate allocation that derived the reported EW D-optimal design

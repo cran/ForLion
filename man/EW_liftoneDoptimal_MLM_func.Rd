@@ -37,9 +37,9 @@ EW_liftoneDoptimal_MLM_func(
 
 \item{p00}{specified initial approximate allocation, default to NULL, if NULL, will generate a random initial approximate allocation}
 
-\item{random}{TRUE or FALSE, if TRUE then the function will run with additional "nram" number of initial allocation p00, default to be TRUE}
+\item{random}{TRUE or FALSE, if TRUE then the function will run lift-one with additional "nram" number of random approximate allocation, default to be FALSE}
 
-\item{nram}{when random == TRUE, the function will generate nram number of initial points, default is 3}
+\item{nram}{when random == TRUE, the function will run lift-one nram number of initial proportion p00, default is 3}
 }
 \value{
 p              reported EW D-optimal approximate allocation

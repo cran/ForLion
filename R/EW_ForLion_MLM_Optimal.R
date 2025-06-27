@@ -5,26 +5,27 @@
 #' Factors may include discrete factors with finite number of distinct levels and continuous factors with specified interval range (min, max), continuous factors, if any, must serve as main-effects only, allowing merging points that are close enough.
 #' Continuous factors first then discrete factors, model parameters should in the same order of factors.
 #' @param J number of response levels in the multinomial logit model
-#' @param n.factor vector of numbers of distinct levels, "0" indicates continuous factors, "0"s always come first, "2" or above indicates discrete factor, "1" is not allowed
-#' @param factor.level list of distinct levels, (min, max) for continuous factor, continuous factors first, should be the same order as n.factor
-#' @param xlist_fix the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables
-#' @param hfunc function for obtaining model matrix h(y) for given design point y, y has to follow the same order as n.factor
+#' @param n.factor Vector of numbers of distinct levels, “0” indicating continuous factors that always come first, “2” or more for discrete factors, and “1” not allowed.
+#' @param factor.level list of distinct factor levels, “(min, max)” for continuous factors that always come first, finite sets for discrete factors.
+#' @param var_names Names for the design factors. Must have the same length asfactor.level. Defaults to "X1", "X2", ...
+#' @param xlist_fix list of discrete factor experimental settings under consideration, default NULL indicating a list of all possible discrete factor experimental settings will be used.
+#' @param hfunc function for generating the corresponding model matrix or predictor vector, given an experimental setting or design point.
 #' @param h.prime function to obtain dX/dx
-#' @param bvec_matrix the matrix of the sampled parameter values of beta
+#' @param bvec_matrix Matrix of bootstrapped or simulated parameter values.
 #' @param link link function, default "continuation", other choices "baseline", "cumulative", and "adjacent"
-#' @param EW_Fi.func function to calculate row-wise Expectation of Fisher information Fi, default is EW_Fi_MLM_func
-#' @param delta tuning parameter, the generated design pints distance threshold, || x_i(0) - x_j(0) || >= delta, default 1e-5
-#' @param epsilon determining f.det > 0 numerically, f.det <= epsilon will be considered as f.det <= 0, default 1e-12
+#' @param EW_Fi.func function to calculate entry wise expectation of Fisher information Fi, default EW_Fi_MLM_func.
+#' @param delta0 merging threshold for initial design, such that, || x_i(0) - x_j(0) || >= delta0, default 1e-5
+#' @param epsilon tuning parameter as converging threshold, such that, a nonnegative number is regarded as numerical zero if less than epsilon, default 1e-12.
 #' @param reltol the relative convergence tolerance, default value 1e-5
-#' @param rel.diff points with distance less than that will be merged, default value 0
+#' @param delta relative difference as merging threshold for the merging step, the distance of two points less than delta may be merged, default 0, can be different from delta0 for the initial design.
 #' @param maxit the maximum number of iterations, default value 100
-#' @param random TRUE or FALSE, if TRUE then the function will run lift-one with additional "nram" number of random approximate allocation, default to be FALSE
-#' @param nram when random == TRUE, the function will run lift-one nram number of initial proportion p00, default is 3
+#' @param random TRUE or FALSE, whether or not to repeat the lift-one step multiple times with random initial allocations, default FALSE.
+#' @param nram number of times repeating the lift-one step with random initial allocations, valid only if random is TRUE, default 3.
 #' @param rowmax maximum number of points in the initial design, default NULL indicates no restriction
-#' @param Xini initial list of design points, default NULL will generate random initial design points
-#' @param random.initial TRUE or FALSE, if TRUE then the function will run EW ForLion with additional "nram.initial" number of random initial design points, default FALSE
-#' @param nram.initial when random.initial == TRUE, the function will run EW ForLion algorithm with nram.initial number of initial design points Xini, default is 3
-#' @param optim_grad TRUE or FALSE, default is FALSE, whether to use the analytical gradient function or numerical gradient for searching optimal new design point
+#' @param Xini initial list of design points, default NULL indicating automatically generating an initial list of design points.
+#' @param random.initial TRUE or FALSE, whether or not to repeat the whole procedure multiple times with random initial designs, default FALSE.
+#' @param nram.initial number of times repeating the whole procedure with random initial designs, valid only if random.initial is TRUE, default 3.
+#' @param optim_grad TRUE or FALSE, default is FALSE, whether to use the analytical gradient function or numerical gradient when searching for a new design point.
 #'
 #' @return m           the number of design points
 #' @return x.factor    matrix of experimental factors with rows indicating design point
@@ -57,18 +58,18 @@
 #'                          -9.2154, -9.7576, -9.6818, -8.5139, -8.56),nrow=4,byrow=TRUE)
 #' EW_ForLion_MLM_Optimal(J=J, n.factor=n.factor.temp, factor.level=factor.level.temp,
 #'          xlist_fix=NULL, hfunc=hfunc.temp,h.prime=h.prime.temp, bvec_matrix=bvec_bootstrap,
-#'          rel.diff=1, link=link.temp, optim_grad=FALSE)
+#'          delta=1, link=link.temp, optim_grad=FALSE)
 #'
 
 
 
 
 
-EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfunc, h.prime, bvec_matrix, link="continuation", EW_Fi.func=EW_Fi_MLM_func, delta=1e-5, epsilon=1e-12, reltol=1e-5, rel.diff=0, maxit=100, random=FALSE, nram=3, rowmax=NULL, Xini=NULL, random.initial=FALSE, nram.initial=3, optim_grad=FALSE) {
+EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,var_names=NULL,xlist_fix=NULL, hfunc, h.prime, bvec_matrix, link="continuation", EW_Fi.func=EW_Fi_MLM_func, delta0=1e-5, epsilon=1e-12, reltol=1e-5, delta=0, maxit=100, random=FALSE, nram=3, rowmax=NULL, Xini=NULL, random.initial=FALSE, nram.initial=3, optim_grad=FALSE) {
   d.factor=length(n.factor);             # number of factors
   p.factor=dim(bvec_matrix)[2];                 # number of predictors
   k.continuous=sum(n.factor==0);         # number of continuous factors
-  if(rel.diff==0) rel.diff=reltol;
+  if(delta==0) delta=reltol;
 
   #    Case I: all factors are discrete
   if(k.continuous==0) {
@@ -98,7 +99,7 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
   if(k.continuous==d.factor) {
     lvec=uvec=rep(0, d.factor);     # lower bounds and upper bounds for continuous factors
     for(i in 1:d.factor) {lvec[i]=min(factor.level[[i]]); uvec[i]=max(factor.level[[i]]);};
-    if(is.null(Xini)){initial.temp=EW_design_initial_MLM(k.continuous=k.continuous, factor.level=factor.level, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec_matrix=bvec_matrix, link=link, h.func=hfunc, EW_Fi.func=EW_Fi.func, delta=delta, epsilon = epsilon, maxit=maxit); xtemp=initial.temp$X; p0=initial.temp$p0} else {xtemp=Xini; p0=NULL}  #no initial design
+    if(is.null(Xini)){initial.temp=EW_design_initial_MLM(k.continuous=k.continuous, factor.level=factor.level, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec_matrix=bvec_matrix, link=link, h.func=hfunc, EW_Fi.func=EW_Fi.func, delta0=delta0, epsilon = epsilon, maxit=maxit); xtemp=initial.temp$X; p0=initial.temp$p0} else {xtemp=Xini; p0=NULL}  #no initial design
     if(k.continuous==1) m.design=length(xtemp) else m.design=nrow(xtemp);                   # initial number of design points
     X.mat = rep(0,J*p.factor*m.design);
     dim(X.mat)=c(J, p.factor, m.design)  # initial model matrix X
@@ -178,7 +179,7 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
       dtemp=as.matrix(stats::dist(x.design));
       diag(dtemp)=Inf;
       atemp=min(dtemp)
-      while((atemp<rel.diff)){ # merge closest two neighbors
+      while((atemp<delta)){ # merge closest two neighbors
         #before merging two closest points, save the current state of the design
         x.design_old=x.design
         p.design_old=p.design
@@ -314,7 +315,7 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
     if(random.initial){
       for(num in 1:nram.initial){
         #try different initial points
-        initial.temp=EW_design_initial_MLM(k.continuous=k.continuous, factor.level=factor.level, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec_matrix=bvec_matrix, link=link, h.func=hfunc, EW_Fi.func=EW_Fi.func, delta=delta, epsilon=epsilon, maxit=maxit); xtemp=initial.temp$X; p0=initial.temp$p0 #random initial design
+        initial.temp=EW_design_initial_MLM(k.continuous=k.continuous, factor.level=factor.level, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec_matrix=bvec_matrix, link=link, h.func=hfunc, EW_Fi.func=EW_Fi.func, delta0=delta0, epsilon=epsilon, maxit=maxit); xtemp=initial.temp$X; p0=initial.temp$p0 #random initial design
         if(k.continuous==1) m.design=length(xtemp) else m.design=nrow(xtemp);                   # initial number of design points
         X.mat = rep(0,J*p.factor*m.design);
         dim(X.mat)=c(J, p.factor, m.design)  # initial model matrix X
@@ -391,7 +392,7 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
           dtemp=as.matrix(stats::dist(x.design));
           diag(dtemp)=Inf;
           atemp=min(dtemp)
-          while((atemp<rel.diff)){ # merge closest two neighbors
+          while((atemp<delta)){ # merge closest two neighbors
             #before merging two closest points, save the current state of the design
             x.design_old=x.design
             p.design_old=p.design
@@ -535,7 +536,7 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
   if((k.continuous>0)&&(k.continuous<d.factor)) {
     lvec=uvec=rep(0, k.continuous);     # lower bounds and upper bounds for continuous factors
     for(i in 1:k.continuous) {lvec[i]=min(factor.level[[i]]); uvec[i]=max(factor.level[[i]]);}; #read in continuous covariates boundary
-    if(is.null(Xini)){initial.temp=EW_design_initial_MLM(k.continuous=k.continuous, factor.level=factor.level, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec_matrix=bvec_matrix, link=link, h.func=hfunc, EW_Fi.func=EW_Fi.func, delta=delta, epsilon = epsilon, maxit=500); xtemp=initial.temp$X; p0=initial.temp$p0} else {xtemp=Xini; p0=NULL}  #no initial design
+    if(is.null(Xini)){initial.temp=EW_design_initial_MLM(k.continuous=k.continuous, factor.level=factor.level, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec_matrix=bvec_matrix, link=link, h.func=hfunc, EW_Fi.func=EW_Fi.func, delta0=delta0, epsilon = epsilon, maxit=500); xtemp=initial.temp$X; p0=initial.temp$p0} else {xtemp=Xini; p0=NULL}  #no initial design
 
     ## update on 2022/08/28 change EW_Xw_discrete_self function to sequentially and randomly choose x_i^0 => design.initial.self function
 
@@ -568,8 +569,7 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
     inv.F.mat = solve(F.mat, tol=.Machine$double.xmin)
 
     #calculate E(d(x, Xi)) function
-    if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}
-    else{xdiscrete=xlist_fix;}
+    if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}else{xdiscrete=xlist_fix;}
     ndiscrete=dim(xdiscrete)[1];
 
     for(idiscrete in 1:ndiscrete) {
@@ -597,6 +597,7 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
       up_dvalue = d_x_Xi(uvec)
       if(low_dvalue < ytemp$value){ytemp$par=lvec; ytemp$value=low_dvalue}
       if(up_dvalue < ytemp$value){ytemp$par=uvec; ytemp$value=up_dvalue}
+      ytempstar=ytemp;
       #random points
       if(random) for(ia in 1:nram) {
         x0r=x0;
@@ -609,9 +610,11 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
       if(idiscrete==1) {
         ystar=c(ytemp$par, xdiscrete[idiscrete,]);
         fvalue=ytemp$value;
+        ytempstar=ytemp;
       } else if(ytemp$value<fvalue) {
         ystar=c(ytemp$par, xdiscrete[idiscrete,]);
         fvalue=ytemp$value;
+        ytempstar=ytemp;
       };
 
     } #end of for loop of idiscrete
@@ -632,7 +635,7 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
       dtemp=as.matrix(stats::dist(x.design));
       diag(dtemp)=Inf;
       atemp=min(dtemp)
-      while((atemp<rel.diff)){ # merge closest two neighbors
+      while((atemp<delta)){ # merge closest two neighbors
         #before merging two closest points, save the current state of the design
         x.design_old=x.design
         p.design_old=p.design
@@ -709,8 +712,7 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
       inv.F.mat = solve(F.mat, tol=.Machine$double.xmin)
 
       #calculate E(d(x, Xi)) function
-      if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}
-      else{xdiscrete=xlist_fix;}
+      if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}else{xdiscrete=xlist_fix;}
       #xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
       ndiscrete=dim(xdiscrete)[1];
       for(idiscrete in 1:ndiscrete) {
@@ -751,9 +753,11 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
         if(idiscrete==1) {
           ystar=c(ytemp$par, xdiscrete[idiscrete,]);
           fvalue=ytemp$value;
+          ytempstar=ytemp;
         } else if(ytemp$value<fvalue) {
           ystar=c(ytemp$par, xdiscrete[idiscrete,]);
           fvalue=ytemp$value;
+          ytempstar=ytemp;
         };
 
       } #end of for loop of idiscrete
@@ -762,8 +766,8 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
     }# end of while(d()>p) loop
 
     itmax.design=nit;
-    converge.design=(ytemp$convergence==0);  # TRUE or FALSE
-    if(-ytemp$value/p.factor-1 > reltol) converge.design=FALSE;
+    converge.design=(ytempstar$convergence==0);  # TRUE or FALSE
+    if(-ytempstar$value/p.factor-1 > reltol) converge.design=FALSE;
     #updated on 10/23/2022 record as ....ans and to compare with results from random initial points
     m.design.ans=m.design;      #reported num of design points
     x.factor.ans=x.design #reported design points
@@ -771,15 +775,15 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
     det.ans = det.design #reported optimized determinant
     x.model.ans = X.mat #reported model matrix
     itmax.design=nit;
-    converge.design=(ytemp$convergence==0);  # TRUE or FALSE
-    if(-ytemp$value/p.factor-1 > reltol) converge.design=FALSE;
+    converge.design=(ytempstar$convergence==0);  # TRUE or FALSE
+    if(-ytempstar$value/p.factor-1 > reltol) converge.design=FALSE;
     convergence.ans = converge.design
 
     #update on 08/30/2022 add random initial x_i^(0)
     if(random.initial){
       for(num in 1:nram.initial){
         #try different random x_i^0
-        initial.temp=EW_design_initial_MLM(k.continuous=k.continuous, factor.level=factor.level,xlist_fix = xlist_fix, lvec=lvec, uvec=uvec, bvec_matrix=bvec_matrix, link=link, h.func=hfunc, EW_Fi.func=EW_Fi.func, delta=delta, epsilon = epsilon, maxit=500); xtemp=initial.temp$X; p0=initial.temp$p0  #random initial design
+        initial.temp=EW_design_initial_MLM(k.continuous=k.continuous, factor.level=factor.level,xlist_fix = xlist_fix, lvec=lvec, uvec=uvec, bvec_matrix=bvec_matrix, link=link, h.func=hfunc, EW_Fi.func=EW_Fi.func, delta0=delta0, epsilon = epsilon, maxit=500); xtemp=initial.temp$X; p0=initial.temp$p0  #random initial design
 
         ## update on 2022/08/28 change Xw.discrete.self function to sequentially and randomly choose x_i^0 => design.initial.self function
 
@@ -811,8 +815,7 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
         inv.F.mat = solve(F.mat, tol=.Machine$double.xmin)
 
         #calculate E(d(x, Xi)) function
-        if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}
-        else{xdiscrete=xlist_fix;}
+        if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}else{xdiscrete=xlist_fix;}
         #xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
         ndiscrete=dim(xdiscrete)[1];
         for(idiscrete in 1:ndiscrete) {
@@ -852,9 +855,11 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
           if(idiscrete==1) {
             ystar=c(ytemp$par, xdiscrete[idiscrete,]);
             fvalue=ytemp$value;
+            ytempstar=ytemp;
           } else if(ytemp$value<fvalue) {
             ystar=c(ytemp$par, xdiscrete[idiscrete,]);
             fvalue=ytemp$value;
+            ytempstar=ytemp;
           };
 
         } #end of for loop of idiscrete
@@ -874,7 +879,7 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
           dtemp=as.matrix(stats::dist(x.design));
           diag(dtemp)=Inf;
           atemp=min(dtemp)
-          while((atemp<rel.diff)){ # merge closest two neighbors
+          while((atemp<delta)){ # merge closest two neighbors
             #before merging two closest points, save the current state of the design
             x.design_old=x.design
             p.design_old=p.design
@@ -951,8 +956,7 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
           inv.F.mat = solve(F.mat, tol=.Machine$double.xmin)
 
           #calculate E(d(x, Xi)) function
-          if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}
-          else{xdiscrete=xlist_fix;}
+          if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}else{xdiscrete=xlist_fix;}
           # xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
           ndiscrete=dim(xdiscrete)[1];
           for(idiscrete in 1:ndiscrete) {
@@ -992,9 +996,11 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
             if(idiscrete==1) {
               ystar=c(ytemp$par, xdiscrete[idiscrete,]);
               fvalue=ytemp$value;
+              ytempstar=ytemp;
             } else if(ytemp$value<fvalue) {
               ystar=c(ytemp$par, xdiscrete[idiscrete,]);
               fvalue=ytemp$value;
+              ytempstar=ytemp;
             };
 
           } #end of for loop of idiscrete
@@ -1003,8 +1009,8 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
         }# end of while(d()>p) loop
 
         itmax.design=nit;
-        converge.design=(ytemp$convergence==0);  # TRUE or FALSE
-        if(-ytemp$value/p.factor-1 > reltol) converge.design=FALSE;
+        converge.design=(ytempstar$convergence==0);  # TRUE or FALSE
+        if(-ytempstar$value/p.factor-1 > reltol) converge.design=FALSE;
         convergence.ans=converge.design
         #compare the new results with the existing results, replace if better
         if(det.design > det.ans){
@@ -1014,8 +1020,8 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
           det.ans = det.design #reported optimized determinant
           x.model.ans = X.mat #reported model matrix
           itmax.design=nit;
-          converge.design=(ytemp$convergence==0);  # TRUE or FALSE
-          if(-ytemp$value/p.factor-1 > reltol) converge.design=FALSE;
+          converge.design=(ytempstar$convergence==0);  # TRUE or FALSE
+          if(-ytempstar$value/p.factor-1 > reltol) converge.design=FALSE;
           convergence.ans=converge.design
         } # end of if condition (change better random points)
 
@@ -1043,7 +1049,7 @@ EW_ForLion_MLM_Optimal <- function(J ,n.factor, factor.level,xlist_fix=NULL, hfu
   #list(m=m.design.ans, x.factor=x.factor.ans, p=p.ans, det=det.ans, x.model=x.model.ans,
   #     convergence=convergence.ans, min.diff=min.diff, x.close=x.close, itmax.design=itmax.design); #updated on 08/30/2022 change name to name.ans
 
-  output<-list(m=m.design.ans, x.factor=x.factor.ans, p=p.ans, det=det.ans, convergence=convergence.ans, min.diff=min.diff, x.close=x.close, itmax=itmax.design); #updated on 08/30/2022 change name to name.ans
+  output<-list(m=m.design.ans, x.factor=x.factor.ans, p=p.ans,var.names=var_names, det=det.ans, convergence=convergence.ans, min.diff=min.diff, x.close=x.close, itmax=itmax.design); #updated on 08/30/2022 change name to name.ans
   class(output) <- "design_output"
   return(output)
   }

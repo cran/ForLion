@@ -1,16 +1,16 @@
 #' function to generate initial design with design points and the approximate allocation
 #' @param k.continuous number of continuous variables
-#' @param factor.level lower, upper limit of continuous variables, and discrete levels of categorical variables, continuous factors come first
+#' @param factor.level list of distinct factor levels, “(min, max)” for continuous factors that always come first, finite sets for discrete factors.
 #' @param MLM TRUE or FALSE, TRUE: generate initial design for multinomial logistic model, FALSE: generate initial design for generalized linear model
-#' @param xlist_fix the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables
+#' @param xlist_fix list of discrete factor experimental settings under consideration, default NULL indicating a list of all possible discrete factor experimental settings will be used.
 #' @param lvec lower limit of continuous variables
 #' @param uvec upper limit of continuous variables
 #' @param bvec assumed parameter values of beta
 #' @param link link function, default "continuation", other options "baseline", "adjacent" and "cumulative"
-#' @param h.func function, is used to transfer the design point to model matrix (e.g. add interaction term, add intercept)
-#' @param Fi.func function, is used to calculate Fisher inforamtion for a design point - default to be Fi_MLM_func() in the package
-#' @param delta tuning parameter, the distance threshold, || x_i(0) - x_j(0) || >= delta
-#' @param epsilon or determining f.det > 0 numerically, f.det <= epsilon will be considered as f.det <= 0
+#' @param h.func function for generating the corresponding model matrix or predictor vector, given an experimental setting or design point.
+#' @param Fi.func function, is used to calculate Fisher inforamtion for a design point, default to be Fi_MLM_func() in the package
+#' @param delta0 tuning parameter, the distance threshold, || x_i(0) - x_j(0) || >= delta0
+#' @param epsilon tuning parameter as converging threshold, such that, a nonnegative number is regarded as numerical zero if less than epsilon, default 1e-12.
 #' @param maxit maximum number of iterations
 #'
 #' @return X      matrix of initial design point
@@ -45,7 +45,7 @@
 #'
 
 
-design_initial_self = function(k.continuous, factor.level, MLM, xlist_fix=NULL, lvec, uvec, bvec, h.func, link="continuation", Fi.func=Fi_MLM_func, delta=1e-6, epsilon=1e-12, maxit=1000){
+design_initial_self = function(k.continuous, factor.level, MLM, xlist_fix=NULL, lvec, uvec, bvec, h.func, link="continuation", Fi.func=Fi_MLM_func, delta0=1e-6, epsilon=1e-12, maxit=1000){
   ## function to generate initial design x_i^(0) and w_i^(0) #update 2022/08/28
   ## input:
   ##        k.continuous: number of continuous variables
@@ -56,7 +56,7 @@ design_initial_self = function(k.continuous, factor.level, MLM, xlist_fix=NULL, 
   ##        link: link function, default "continuation"
   ##        h.func: function, is used to transfer the design matrix to model matrix (e.g. add interaction term, add intercept)
   ##        Fi.func: function, is used to calculate rowwise fisher information Fi
-  ##        delta: tuning parameter, the distance threshold, || x_i(0) - x_j(0) || >= delta
+  ##        delta0: tuning parameter, the distance threshold, || x_i(0) - x_j(0) || >= delta0
   ##        epsilon: for determining f.det > 0 numerically, f.det <= epsilon will be considered as f.det <= 0
   ## output:
   ##        X: matrix of initial design points
@@ -119,7 +119,7 @@ design_initial_self = function(k.continuous, factor.level, MLM, xlist_fix=NULL, 
     }
 
     #if new point meets the requirements, append to x matrix, update f.det; if not skip
-    if(sum(dist < delta)==0){
+    if(sum(dist < delta0)==0){
       m0 = m0+1
       if(d.rv==1){x = c(x, new.point)}else{x = rbind(x, new.point)}
       #x = rbind(x, new.point) #add new row of design points

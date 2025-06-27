@@ -3,20 +3,21 @@
 #' ForLion algorithm to find D-optimal design for GLM models with mixed factors, reference: Section 4 in Huang, Li, Mandal, Yang (2024).
 #' Factors may include discrete factors with finite number of distinct levels and continuous factors with specified interval range (min, max), continuous factors, if any, must serve as main-effects only, allowing merging points that are close enough.
 #' Continuous factors first then discrete factors, model parameters should in the same order of factors.
-#' @param n.factor vector of numbers of distinct levels, "0" indicates continuous factors, "0"s always come first, "2" or above indicates discrete factor, "1" is not allowed
-#' @param factor.level list of distinct levels, (min, max) for continuous factor, continuous factors first, should be the same order as n.factor
-#' @param xlist_fix the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables
-#' @param hfunc function for obtaining model matrix h(y) for given design point y, y has to follow the same order as n.factor
+#' @param n.factor vector of numbers of distinct levels, “0” indicating continuous factors that always come first, “2” or more for discrete factors, and “1” not allowed.
+#' @param factor.level list of distinct factor levels, “(min, max)” for continuous factors that always come first, finite sets for discrete factors.
+#' @param var_names Names for the design factors. Must have the same length asfactor.level. Defaults to "X1", "X2", ...
+#' @param xlist_fix list of discrete factor experimental settings under consideration, default NULL indicating a list of all possible discrete factor experimental settings will be used.
+#' @param hfunc function for generating the corresponding model matrix or predictor vector, given an experimental setting or design point.
 #' @param bvec assumed parameter values of model parameters beta, same length of h(y)
 #' @param link link function, default "logit", other links: "probit", "cloglog", "loglog", "cauchit", "log", "identity"
 #' @param reltol the relative convergence tolerance, default value 1e-5
-#' @param rel.diff points with distance less than that will be merged, default value 0
+#' @param delta relative difference as merging threshold for the merging step, the distance of two points less than delta may be merged, default 0, can be different from delta0 for the initial design.
 #' @param maxit the maximum number of iterations, default value 100
 #' @param random TRUE or FALSE, if TRUE then the function will run lift-one with additional "nram" number of random approximate allocation, default to be FALSE
 #' @param nram when random == TRUE, the function will run lift-one nram number of initial proportion p00, default is 3
-#' @param logscale TRUE or FALSE, if TRUE then the ForLion will run lift-one with logscale, which is liftoneDoptimal_log_GLM_func(); if FALSE then ForLion will run lift-one without logscale, which is liftoneDoptimal_GLM_func()
+#' @param logscale TRUE or FALSE, whether or not to run the lift-one step in log-scale, i.e., using liftoneDoptimal_log_GLM_func() or liftoneDoptimal_GLM_func().
 #' @param rowmax maximum number of points in the initial design, default NULL indicates no restriction
-#' @param Xini initial list of design points, default NULL will generate random initial design points
+#' @param Xini initial list of design points, default NULL indicating automatically generating an initial list of design points.
 #'
 #' @return m number of design points
 #' @return x.factor matrix with rows indicating design point
@@ -36,16 +37,16 @@
 #' link.temp="logit"
 #' b.temp = c(0.3197169,  1.9740922, -0.1191797, -0.2518067,  0.1970956,  0.3981632, -7.6648090)
 #' ForLion_GLM_Optimal(n.factor=n.factor.temp, factor.level=factor.level.temp, xlist_fix=NULL,
-#' hfunc=hfunc.temp, bvec=b.temp, link=link.temp, reltol=1e-2, rel.diff=0.03, maxit=500,
+#' hfunc=hfunc.temp, bvec=b.temp, link=link.temp, reltol=1e-2, delta=0.03, maxit=500,
 #' random=FALSE,nram=3, logscale=TRUE)
 #'
 
 
-ForLion_GLM_Optimal <- function(n.factor, factor.level,xlist_fix=NULL, hfunc, bvec, link, reltol=1e-5, rel.diff=0, maxit=100, random=FALSE, nram=3, logscale=FALSE, rowmax=NULL, Xini=NULL) {
+ForLion_GLM_Optimal <- function(n.factor, factor.level,var_names=NULL,xlist_fix=NULL, hfunc, bvec, link, reltol=1e-5, delta=0, maxit=100, random=FALSE, nram=3, logscale=FALSE, rowmax=NULL, Xini=NULL) {
   d.factor=length(n.factor);             # number of factors
   p.factor=length(bvec);                 # number of predictors
   k.continuous=sum(n.factor==0);         # number of continuous factors
-  if(rel.diff==0) rel.diff=reltol;
+  if(delta==0) delta=reltol;
   # functions for nu(eta), nu'(eta), nu''(eta) given eta
   nutemp=nu_logit_self; nu1temp=nu1_logit_self; nu2temp=nu2_logit_self;
   if(link=="probit") {nutemp=nu_probit_self; nu1temp=nu1_probit_self; nu2temp=nu2_probit_self;};
@@ -81,7 +82,7 @@ ForLion_GLM_Optimal <- function(n.factor, factor.level,xlist_fix=NULL, hfunc, bv
   if(k.continuous==d.factor) {
     lvec=uvec=rep(0, d.factor);     # lower bounds and upper bounds for continuous factors
     for(i in 1:d.factor) {lvec[i]=min(factor.level[[i]]); uvec[i]=max(factor.level[[i]]);};
-    if(is.null(Xini)){initial.temp=design_initial_self(k.continuous=k.continuous, factor.level=factor.level, MLM=FALSE, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec=bvec, link=link, h.func=hfunc, delta=reltol, epsilon = reltol, maxit=maxit); xtemp=initial.temp$X} else {xtemp=Xini}  #no initial design
+    if(is.null(Xini)){initial.temp=design_initial_self(k.continuous=k.continuous, factor.level=factor.level, MLM=FALSE, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec=bvec, link=link, h.func=hfunc, delta0=reltol, epsilon = reltol, maxit=maxit); xtemp=initial.temp$X} else {xtemp=Xini}  #no initial design
     if(k.continuous==1) m.design=length(xtemp) else m.design=nrow(xtemp);                   # initial number of design points
     X.mat = matrix(0, m.design, p.factor);  # initial model matrix X
     w.vec = rep(0, m.design);               # w vector
@@ -117,12 +118,12 @@ ForLion_GLM_Optimal <- function(n.factor, factor.level,xlist_fix=NULL, hfunc, bv
     };
     x0=(lvec+uvec)/2;
     ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec,
-                control=list(maxit=maxit, factr=reltol*1e13)); #(i)
+                       control=list(maxit=maxit, factr=reltol*1e13)); #(i)
     if(random) for(ia in 1:nram) { #random initial point, repeat (i), find potential better ytemp
       x0r=x0;
       for(i in 1:d.factor) x0r[i]=lvec[i]+stats::rbeta(1, 0.5, 0.5)*(uvec[i]-lvec[i]);
       ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec,
-                   control=list(maxit=maxit, factr=reltol*1e13));
+                          control=list(maxit=maxit, factr=reltol*1e13));
       if(ytemp1$value < ytemp$value) { x0=x0r; ytemp=ytemp1; };
     };
     nit=1;                        # number of candidate y searched
@@ -150,7 +151,7 @@ ForLion_GLM_Optimal <- function(n.factor, factor.level,xlist_fix=NULL, hfunc, bv
       dtemp=as.matrix(stats::dist(x.design));
       diag(dtemp)=Inf;
       atemp=min(dtemp)
-      while((atemp<rel.diff)){ # merge closest two neighbors
+      while((atemp<delta)){ # merge closest two neighbors
         #before merging two closest points, save the current state of the design
         x.design_old=x.design
         p.design_old=p.design
@@ -221,12 +222,12 @@ ForLion_GLM_Optimal <- function(n.factor, factor.level,xlist_fix=NULL, hfunc, bv
       };
       x0=(lvec+uvec)/2;
       ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec,
-                  control=list(maxit=maxit, factr=reltol*1e13));
+                         control=list(maxit=maxit, factr=reltol*1e13));
       if(random) for(ia in 1:nram) {
         x0r=x0;
         for(i in 1:d.factor) x0r[i]=lvec[i]+stats::rbeta(1, 0.5, 0.5)*(uvec[i]-lvec[i]);
         ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec,
-                     control=list(maxit=maxit, factr=reltol*1e13));
+                            control=list(maxit=maxit, factr=reltol*1e13));
         if(ytemp1$value < ytemp$value) { x0=x0r; ytemp=ytemp1; };
       };
       nit=nit+1;                    # number of candidate y searched
@@ -239,7 +240,7 @@ ForLion_GLM_Optimal <- function(n.factor, factor.level,xlist_fix=NULL, hfunc, bv
   if((k.continuous>0)&&(k.continuous<d.factor)) {
     lvec=uvec=rep(0, k.continuous);     # lower bounds and upper founds for continuous factors
     for(i in 1:k.continuous) {lvec[i]=min(factor.level[[i]]); uvec[i]=max(factor.level[[i]]);};
-    if(is.null(Xini)){initial.temp=design_initial_self(k.continuous=k.continuous, factor.level=factor.level, MLM=FALSE, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec=bvec, link=link, h.func=hfunc, delta=reltol, epsilon = reltol, maxit=maxit); xtemp=initial.temp$X} else {xtemp=Xini}  #no initial design
+    if(is.null(Xini)){initial.temp=design_initial_self(k.continuous=k.continuous, factor.level=factor.level, MLM=FALSE, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, bvec=bvec, link=link, h.func=hfunc, delta0=reltol, epsilon = reltol, maxit=maxit); xtemp=initial.temp$X} else {xtemp=Xini}  #no initial design
     #if(is.null(Xini)) xtemp=xmat_discrete_self(factor.level, rowmax=rowmax) else xtemp=Xini;
     m.design=nrow(xtemp);                   # initial number of design points
     X.mat = matrix(0, m.design, p.factor);  # initial model matrix X
@@ -260,8 +261,7 @@ ForLion_GLM_Optimal <- function(n.factor, factor.level,xlist_fix=NULL, hfunc, bv
     w.vec = w.vec[optemp$p>0];    # updated w vector
     Dmat = t(X.mat * (p.design*w.vec)) %*% X.mat;    # X^T W X
     Amat = svd_inverse(Dmat);           # (X^T W X)^{-1}
-    if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}
-    else{xdiscrete=xlist_fix;}
+    if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}else{xdiscrete=xlist_fix;}
     # xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);
     ndiscrete=dim(xdiscrete)[1];
     for(idiscrete in 1:ndiscrete) {
@@ -278,20 +278,23 @@ ForLion_GLM_Optimal <- function(n.factor, factor.level,xlist_fix=NULL, hfunc, bv
       };
       x0=(lvec+uvec)/2;
       ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec,
-                  control=list(maxit=maxit, factr=reltol*1e13));
+                         control=list(maxit=maxit, factr=reltol*1e13));
+      ytempstar=ytemp;
       if(random) for(ia in 1:nram) {
         x0r=x0;
         for(i in 1:k.continuous) x0r[i]=lvec[i]+stats::rbeta(1, 0.5, 0.5)*(uvec[i]-lvec[i]);
         ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec,
-                     control=list(maxit=maxit, factr=reltol*1e13));
-        if(ytemp1$value < ytemp$value) { x0=x0r; ytemp=ytemp1; };
+                            control=list(maxit=maxit, factr=reltol*1e13));
+        if(ytemp1$value < ytemp$value) { x0=x0r; ytemp=ytemp1;};
       };
       if(idiscrete==1) {
         ystar=c(ytemp$par, xdiscrete[idiscrete,]);
         fvalue=ytemp$value;
+        ytempstar=ytemp;
       } else if(ytemp$value<fvalue) {
         ystar=c(ytemp$par, xdiscrete[idiscrete,]);
         fvalue=ytemp$value;
+        ytempstar=ytemp;
       };
     };                            # end of "idiscrete" loop
     nit=1;                        # number of candidate y searched
@@ -316,7 +319,7 @@ ForLion_GLM_Optimal <- function(n.factor, factor.level,xlist_fix=NULL, hfunc, bv
       dtemp=as.matrix(stats::dist(x.design));
       diag(dtemp)=Inf;
       atemp=min(dtemp)
-      while((atemp<rel.diff)){ # merge closest two neighbors
+      while((atemp<delta)){ # merge closest two neighbors
         #before merging two closest points, save the current state of the design
         x.design_old=x.design
         p.design_old=p.design
@@ -385,27 +388,29 @@ ForLion_GLM_Optimal <- function(n.factor, factor.level,xlist_fix=NULL, hfunc, bv
         };
         x0=(lvec+uvec)/2;
         ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec,
-                    control=list(maxit=maxit, factr=reltol*1e13));
+                           control=list(maxit=maxit, factr=reltol*1e13));
         if(random) for(ia in 1:nram) {
           x0r=x0;
           for(i in 1:k.continuous) x0r[i]=lvec[i]+stats::rbeta(1, 0.5, 0.5)*(uvec[i]-lvec[i]);
           ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec,
-                       control=list(maxit=maxit, factr=reltol*1e13));
-          if(ytemp1$value < ytemp$value) { x0=x0r; ytemp=ytemp1; };
+                              control=list(maxit=maxit, factr=reltol*1e13));
+          if(ytemp1$value < ytemp$value) { x0=x0r; ytemp=ytemp1;};
         };
         if(idiscrete==1) {
           ystar=c(ytemp$par, xdiscrete[idiscrete,]);
           fvalue=ytemp$value;
+          ytempstar=ytemp;
         } else if(ytemp$value<fvalue) {
           ystar=c(ytemp$par, xdiscrete[idiscrete,]);
           fvalue=ytemp$value;
+          ytempstar=ytemp;
         };
       };                            # end of "idiscrete" loop
       nit=nit+1;                    # number of candidate y searched
     };     # End of "while" loop
     itmax.design=nit;
-    converge.design=(ytemp$convergence==0);  # TRUE or FALSE
-    if(-ytemp$value/p.factor-1 > reltol) converge.design=FALSE;
+    converge.design=(ytempstar$convergence==0);  # TRUE or FALSE
+    if(-ytempstar$value/p.factor-1 > reltol) converge.design=FALSE;
   };                                # end of Case III
   rownames(x.design)=NULL;
   rownames(X.mat)=NULL;
@@ -420,16 +425,7 @@ ForLion_GLM_Optimal <- function(n.factor, factor.level,xlist_fix=NULL, hfunc, bv
   # list(m=m.design, x.factor=x.design, p=p.design, det=det.design, x.model=X.mat, w=w.vec, convergence=converge.design, min.diff=min.diff, x.close=x.close);
 
   #define S3 class
-  output<-list(m=m.design, x.factor=x.design, p=p.design, det=det.design, convergence=converge.design, min.diff=min.diff, x.close=x.close, itmax=itmax.design);
+  output<-list(m=m.design, x.factor=x.design, p=p.design,var.names=var_names, det=det.design, convergence=converge.design, min.diff=min.diff, x.close=x.close, itmax=itmax.design);
   class(output) <- "design_output"
   return(output)
 }
-
-
-
-
-
-
-
-
-

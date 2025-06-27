@@ -17,17 +17,16 @@ beta.value = c(0.35,1.50,-0.2,-0.15,0.25,0.4,-7.5)       # continuous first and 
 
 ## -----------------------------------------------------------------------------
 set.seed(482)
-forlion.glm=ForLion_GLM_Optimal(n.factor=n.factor.temp,factor.level=factor.level.temp, hfunc=hfunc.temp,bvec=beta.value,link=link.temp,reltol=1e-8, rel.diff=0.03, maxit=500, random=FALSE, logscale=TRUE)
-
+forlion.glm=ForLion_GLM_Optimal(n.factor=n.factor.temp, factor.level=factor.level.temp, hfunc=hfunc.temp,bvec=beta.value,link=link.temp,reltol=1e-5, delta=0.1, maxit=1000, random=FALSE, logscale=TRUE)
 forlion.glm
 
 ## -----------------------------------------------------------------------------
 GLM_Exact_Design(k.continuous=1, design_x=forlion.glm$x.factor, design_p=forlion.glm$p,
-det.design=forlion.glm$det,p=7, ForLion=TRUE, bvec=beta.value, rel.diff=0.5,L=0.1,N=500, hfunc=hfunc.temp, link="logit")
+det.design=forlion.glm$det,p=7, ForLion=TRUE, bvec=beta.value, delta2=0.5,L=0.1,N=500, hfunc=hfunc.temp, link="logit")
 
 ## -----------------------------------------------------------------------------
-nrun = 200
-set.seed(0713)
+nrun = 100
+set.seed(2025)
 b_0 = runif(nrun, -8, -7)
 b_1 = runif(nrun, 1, 2)
 b_2 = runif(nrun, -0.3, -0.1)
@@ -38,8 +37,8 @@ b_34= runif(nrun, 0.35, 0.45)
 beta.matrix = cbind(b_5,b_1,b_2,b_3,b_4,b_34,b_0)
 
 ## -----------------------------------------------------------------------------
-set.seed(482)
-EW_ForLion_GLM_Optimal(n.factor=c(0, 2, 2, 2, 2), factor.level=list(c(25,45),c(-1,1),c(-1,1),c(-1,1),c(-1,1)), hfunc=hfunc.temp, Integral_based=FALSE, b_matrix=beta.matrix, link="logit", reltol=1e-8, rel.diff=5e-3, optim_grad=TRUE, maxit=500, random=FALSE,nram=1,logscale=TRUE)
+ set.seed(482)
+ EW_ForLion_GLM_Optimal(n.factor=c(0, 2, 2, 2, 2), factor.level=list(c(25,45),c(-1,1),c(-1,1),c(-1,1),c(-1,1)), hfunc=hfunc.temp, Integral_based=FALSE, b_matrix=beta.matrix, link="logit", reltol=1e-6, delta=0.01, maxit=500, random=FALSE,nram=1,logscale=TRUE)
 
 ## -----------------------------------------------------------------------------
 link.temp = "cumulative"
@@ -63,7 +62,7 @@ b.temp = c(-1.77994301, -0.05287782,  1.86852211, 2.76330779, -0.94437464, 0.185
 
 ## -----------------------------------------------------------------------------
 set.seed(123)
-ForLion_MLM_Optimal(J=J, n.factor=n.factor.temp, factor.level=factor.level.temp, hfunc=hfunc.temp, h.prime=hprime.temp, bvec=b.temp, link=link.temp, Fi.func=Fi_MLM_func, delta=1e-2, epsilon=1e-10, reltol=1e-8, rel.diff=0.5, maxit=500, optim_grad=FALSE)
+ForLion_MLM_Optimal(J=J, n.factor=n.factor.temp, factor.level=factor.level.temp, hfunc=hfunc.temp, h.prime=hprime.temp, bvec=b.temp, link=link.temp, Fi.func=Fi_MLM_func, delta0=1e-2, epsilon=1e-10, reltol=1e-8, delta=0.5, maxit=500, optim_grad=FALSE)
 
 ## -----------------------------------------------------------------------------
 nrun = 100
@@ -83,12 +82,13 @@ beta.temp2 = cbind(theta1, theta2, theta3, theta4, b_clean, b_temperature, b_pre
 
 ## -----------------------------------------------------------------------------
 set.seed(123)
-EW_forlion.MLM =EW_ForLion_MLM_Optimal(J=J, n.factor=n.factor.temp,
-factor.level=factor.level.temp,hfunc=hfunc.temp, h.prime=hprime.temp, bvec_matrix=beta.temp2, link=link.temp, EW_Fi.func=EW_Fi_MLM_func, 
-delta=1e-2, epsilon=1e-10, reltol=1e-8, rel.diff=0.5, maxit=500, optim_grad=FALSE)
+EW_forlion.MLM =EW_ForLion_MLM_Optimal(J=J, n.factor=n.factor.temp, factor.level=factor.level.temp,
+hfunc=hfunc.temp, h.prime=hprime.temp, bvec_matrix=beta.temp2, link=link.temp, EW_Fi.func=EW_Fi_MLM_func, 
+delta0=1e-2, epsilon=1e-10, reltol=1e-8, delta=0.5, maxit=500, optim_grad=FALSE)
 
 EW_forlion.MLM 
 
 ## -----------------------------------------------------------------------------
-MLM_Exact_Design(J=J, k.continuous=5,design_x=EW_forlion.MLM$x.factor,design_p=EW_forlion.MLM$p,det.design=EW_forlion.MLM$det,p=10,ForLion=FALSE,bvec_matrix=beta.temp2,rel.diff=1,L=c(0.5,0.1,0.1,0.1,1),N=1000,hfunc=hfunc.temp,link=link.temp)
+MLM_Exact_Design(J=J, k.continuous=5,design_x=EW_forlion.MLM$x.factor,design_p=EW_forlion.MLM$p,det.design=
+EW_forlion.MLM$det,p=10,ForLion=FALSE,bvec_matrix=beta.temp2,delta2=1,L=c(0.5,0.1,0.1,0.1,1),N=1000,hfunc=hfunc.temp,link=link.temp)
 

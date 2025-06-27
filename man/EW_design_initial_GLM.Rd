@@ -17,7 +17,7 @@ EW_design_initial_GLM(
   uvec,
   h.func,
   link = "continuation",
-  delta = 1e-06,
+  delta0 = 1e-06,
   epsilon = 1e-12,
   maxit = 1000
 )
@@ -25,19 +25,19 @@ EW_design_initial_GLM(
 \arguments{
 \item{k.continuous}{number of continuous variables}
 
-\item{factor.level}{lower, upper limit of continuous variables, and discrete levels of categorical variables, continuous factors come first}
+\item{factor.level}{list of distinct factor levels, “(min, max)” for continuous factors that always come first, finite sets for discrete factors.}
 
-\item{Integral_based}{TRUE or FALSE, if TRUE then we will find the integral-based EW D-optimality otherwise we will find the sample-based EW D-optimality}
+\item{Integral_based}{TRUE or FALSE, whether or not integral-based EW D-optimality is used, FALSE indicates sample-based EW D-optimality is used.}
 
-\item{b_matrix}{The matrix of the sampled parameter values of beta}
+\item{b_matrix}{matrix of bootstrapped or simulated parameter values.}
 
-\item{joint_Func_b}{The prior joint probability distribution of the parameters}
+\item{joint_Func_b}{prior distribution function of model parameters}
 
-\item{Lowerbounds}{The lower limit of the prior distribution for each parameter}
+\item{Lowerbounds}{vector of lower ends of ranges of prior distribution for model parameters.}
 
-\item{Upperbounds}{The upper limit of the prior distribution for each parameter}
+\item{Upperbounds}{vector of upper ends of ranges of prior distribution for model parameters.}
 
-\item{xlist_fix}{the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables}
+\item{xlist_fix}{list of discrete factor experimental settings under consideration, default NULL indicating a list of all possible discrete factor experimental settings will be used.}
 
 \item{lvec}{lower limit of continuous variables}
 
@@ -47,7 +47,7 @@ EW_design_initial_GLM(
 
 \item{link}{link function, default "continuation", other options "baseline", "adjacent" and "cumulative"}
 
-\item{delta}{tuning parameter, the distance threshold, || x_i(0) - x_j(0) || >= delta}
+\item{delta0}{tuning parameter, the distance threshold, || x_i(0) - x_j(0) || >= delta0}
 
 \item{epsilon}{determining f.det > 0 numerically, f.det <= epsilon will be considered as f.det <= 0}
 

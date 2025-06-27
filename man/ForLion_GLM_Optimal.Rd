@@ -7,12 +7,13 @@
 ForLion_GLM_Optimal(
   n.factor,
   factor.level,
+  var_names = NULL,
   xlist_fix = NULL,
   hfunc,
   bvec,
   link,
   reltol = 1e-05,
-  rel.diff = 0,
+  delta = 0,
   maxit = 100,
   random = FALSE,
   nram = 3,
@@ -22,13 +23,15 @@ ForLion_GLM_Optimal(
 )
 }
 \arguments{
-\item{n.factor}{vector of numbers of distinct levels, "0" indicates continuous factors, "0"s always come first, "2" or above indicates discrete factor, "1" is not allowed}
+\item{n.factor}{vector of numbers of distinct levels, “0” indicating continuous factors that always come first, “2” or more for discrete factors, and “1” not allowed.}
 
-\item{factor.level}{list of distinct levels, (min, max) for continuous factor, continuous factors first, should be the same order as n.factor}
+\item{factor.level}{list of distinct factor levels, “(min, max)” for continuous factors that always come first, finite sets for discrete factors.}
 
-\item{xlist_fix}{the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables}
+\item{var_names}{Names for the design factors. Must have the same length asfactor.level. Defaults to "X1", "X2", ...}
 
-\item{hfunc}{function for obtaining model matrix h(y) for given design point y, y has to follow the same order as n.factor}
+\item{xlist_fix}{list of discrete factor experimental settings under consideration, default NULL indicating a list of all possible discrete factor experimental settings will be used.}
+
+\item{hfunc}{function for generating the corresponding model matrix or predictor vector, given an experimental setting or design point.}
 
 \item{bvec}{assumed parameter values of model parameters beta, same length of h(y)}
 
@@ -36,7 +39,7 @@ ForLion_GLM_Optimal(
 
 \item{reltol}{the relative convergence tolerance, default value 1e-5}
 
-\item{rel.diff}{points with distance less than that will be merged, default value 0}
+\item{delta}{relative difference as merging threshold for the merging step, the distance of two points less than delta may be merged, default 0, can be different from delta0 for the initial design.}
 
 \item{maxit}{the maximum number of iterations, default value 100}
 
@@ -44,11 +47,11 @@ ForLion_GLM_Optimal(
 
 \item{nram}{when random == TRUE, the function will run lift-one nram number of initial proportion p00, default is 3}
 
-\item{logscale}{TRUE or FALSE, if TRUE then the ForLion will run lift-one with logscale, which is liftoneDoptimal_log_GLM_func(); if FALSE then ForLion will run lift-one without logscale, which is liftoneDoptimal_GLM_func()}
+\item{logscale}{TRUE or FALSE, whether or not to run the lift-one step in log-scale, i.e., using liftoneDoptimal_log_GLM_func() or liftoneDoptimal_GLM_func().}
 
 \item{rowmax}{maximum number of points in the initial design, default NULL indicates no restriction}
 
-\item{Xini}{initial list of design points, default NULL will generate random initial design points}
+\item{Xini}{initial list of design points, default NULL indicating automatically generating an initial list of design points.}
 }
 \value{
 m number of design points
@@ -80,7 +83,7 @@ factor.level.temp = list(c(25,45),c(-1,1),c(-1,1),c(-1,1),c(-1,1))
 link.temp="logit"
 b.temp = c(0.3197169,  1.9740922, -0.1191797, -0.2518067,  0.1970956,  0.3981632, -7.6648090)
 ForLion_GLM_Optimal(n.factor=n.factor.temp, factor.level=factor.level.temp, xlist_fix=NULL,
-hfunc=hfunc.temp, bvec=b.temp, link=link.temp, reltol=1e-2, rel.diff=0.03, maxit=500,
+hfunc=hfunc.temp, bvec=b.temp, link=link.temp, reltol=1e-2, delta=0.03, maxit=500,
 random=FALSE,nram=3, logscale=TRUE)
 
 }

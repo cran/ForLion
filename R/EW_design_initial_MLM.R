@@ -1,15 +1,15 @@
 #' function to generate a initial EW Design for multinomial logistic models
 #'
 #' @param k.continuous number of continuous variables
-#' @param factor.level lower, upper limit of continuous variables, and discrete levels of categorical variables, continuous factors come first
-#' @param xlist_fix the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables
+#' @param factor.level list of distinct factor levels, “(min, max)” for continuous factors that always come first, finite sets for discrete factors.
+#' @param xlist_fix list of discrete factor experimental settings under consideration, default NULL indicating a list of all possible discrete factor experimental settings will be used.
 #' @param lvec lower limit of continuous variables
 #' @param uvec upper limit of continuous variables
 #' @param bvec_matrix the matrix of the sampled parameter values of beta
 #' @param h.func function, is used to transfer the design point to model matrix (e.g. add interaction term, add intercept)
 #' @param link link function, default "continuation", other options "baseline", "adjacent" and "cumulative"
 #' @param EW_Fi.func function, is used to calculate the Expectation of Fisher information for a design point - default to be EW_Fi_MLM_func() in the package
-#' @param delta tuning parameter, the distance threshold, || x_i(0) - x_j(0) || >= delta
+#' @param delta0 tuning parameter, the distance threshold, || x_i(0) - x_j(0) || >= delta0
 #' @param epsilon determining f.det > 0 numerically, f.det <= epsilon will be considered as f.det <= 0
 #' @param maxit maximum number of iterations
 #'
@@ -38,7 +38,7 @@
 
 
 
-EW_design_initial_MLM<- function(k.continuous, factor.level, xlist_fix=NULL, lvec, uvec, bvec_matrix, h.func,link="continuation", EW_Fi.func=EW_Fi_MLM_func, delta=1e-6, epsilon=1e-12, maxit=1000){
+EW_design_initial_MLM<- function(k.continuous, factor.level, xlist_fix=NULL, lvec, uvec, bvec_matrix, h.func,link="continuation", EW_Fi.func=EW_Fi_MLM_func, delta0=1e-6, epsilon=1e-12, maxit=1000){
   d.rv = length(factor.level) #number of variables
   if(k.continuous > 0 && (d.rv-k.continuous) > 0){ #mixed case
     #generate initial continuous uniform r.v for continuous variables
@@ -93,7 +93,7 @@ EW_design_initial_MLM<- function(k.continuous, factor.level, xlist_fix=NULL, lve
       }
     }
     #if new point meets the requirements, append to x matrix, update f.det; if not skip
-    if(sum(dist < delta)==0){
+    if(sum(dist < delta0)==0){
       m0 = m0+1
       if(d.rv==1){x = c(x, new.point)}else{x = rbind(x, new.point)}
       #x = rbind(x, new.point) #add new row of design points

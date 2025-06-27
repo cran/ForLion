@@ -15,7 +15,7 @@ design_initial_self(
   h.func,
   link = "continuation",
   Fi.func = Fi_MLM_func,
-  delta = 1e-06,
+  delta0 = 1e-06,
   epsilon = 1e-12,
   maxit = 1000
 )
@@ -23,11 +23,11 @@ design_initial_self(
 \arguments{
 \item{k.continuous}{number of continuous variables}
 
-\item{factor.level}{lower, upper limit of continuous variables, and discrete levels of categorical variables, continuous factors come first}
+\item{factor.level}{list of distinct factor levels, “(min, max)” for continuous factors that always come first, finite sets for discrete factors.}
 
 \item{MLM}{TRUE or FALSE, TRUE: generate initial design for multinomial logistic model, FALSE: generate initial design for generalized linear model}
 
-\item{xlist_fix}{the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables}
+\item{xlist_fix}{list of discrete factor experimental settings under consideration, default NULL indicating a list of all possible discrete factor experimental settings will be used.}
 
 \item{lvec}{lower limit of continuous variables}
 
@@ -35,15 +35,15 @@ design_initial_self(
 
 \item{bvec}{assumed parameter values of beta}
 
-\item{h.func}{function, is used to transfer the design point to model matrix (e.g. add interaction term, add intercept)}
+\item{h.func}{function for generating the corresponding model matrix or predictor vector, given an experimental setting or design point.}
 
 \item{link}{link function, default "continuation", other options "baseline", "adjacent" and "cumulative"}
 
-\item{Fi.func}{function, is used to calculate Fisher inforamtion for a design point - default to be Fi_MLM_func() in the package}
+\item{Fi.func}{function, is used to calculate Fisher inforamtion for a design point, default to be Fi_MLM_func() in the package}
 
-\item{delta}{tuning parameter, the distance threshold, || x_i(0) - x_j(0) || >= delta}
+\item{delta0}{tuning parameter, the distance threshold, || x_i(0) - x_j(0) || >= delta0}
 
-\item{epsilon}{or determining f.det > 0 numerically, f.det <= epsilon will be considered as f.det <= 0}
+\item{epsilon}{tuning parameter as converging threshold, such that, a nonnegative number is regarded as numerical zero if less than epsilon, default 1e-12.}
 
 \item{maxit}{maximum number of iterations}
 }

@@ -6,25 +6,25 @@
 #' with specified interval range (min, max), continuous factors, if any, must serve as main-effects
 #' only, allowing merging points that are close enough.Continuous factors first then discrete factors,
 #'  model parameters should in the same order of factors.
-#' @param n.factor vector of numbers of distinct levels, "0" indicates continuous factors, "0"s always come first, "2" or above indicates discrete factor, "1" is not allowed
-#' @param factor.level list of distinct levels, (min, max) for continuous factor, continuous factors first, should be the same order as n.factor
-#' @param hfunc function for obtaining model matrix h(y) for given design point y, y has to follow the same order as n.factor
-#' @param Integral_based TRUE or FALSE, if TRUE then we will find the integral-based EW D-optimality otherwise we will find the sample-based EW D-optimality
-#' @param b_matrix     The matrix of the sampled parameter values of beta
-#' @param joint_Func_b The prior joint probability distribution of the parameters
-#' @param Lowerbounds The lower limit of the prior distribution for each parameter
-#' @param Upperbounds The upper limit of the prior distribution for each parameter
-#' @param xlist_fix the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables
+#' @param n.factor vector of numbers of distinct levels, “0” indicating continuous factors that always come first, “2” or more for discrete factors, and “1” not allowed.
+#' @param factor.level list of distinct factor levels, “(min, max)” for continuous factors that always come first, finite sets for discrete factors.
+#' @param var_names Names for the design factors. Must have the same length asfactor.level. Defaults to "X1", "X2", ...
+#' @param hfunc function for generating the corresponding model matrix or predictor vector, given an experimental setting or design point.
+#' @param Integral_based TRUE or FALSE, whether or not integral-based EW D-optimality is used, FALSE indicates sample-based EW D-optimality is used.
+#' @param b_matrix     matrix of bootstrapped or simulated parameter values.
+#' @param joint_Func_b prior distribution function of model parameters
+#' @param Lowerbounds vector of lower ends of ranges of prior distribution for model parameters.
+#' @param Upperbounds vector of upper ends of ranges of prior distribution for model parameters.
+#' @param xlist_fix list of discrete factor experimental settings under consideration, default NULL indicating a list of all possible discrete factor experimental settings will be used.
 #' @param link link function, default "logit", other links: "probit", "cloglog", "loglog", "cauchit", "log", "identity"
 #' @param reltol the relative convergence tolerance, default value 1e-5
-#' @param rel.diff points with distance less than that will be merged, default value 0
-#' @param optim_grad TRUE or FALSE, default is FALSE, whether to use the analytical gradient function or numerical gradient for searching optimal new design point
+#' @param delta relative difference as merging threshold for the merging step, the distance of two points less than delta may be merged, default 0, can be different from delta0 for the initial design.
 #' @param maxit the maximum number of iterations, default value 100
 #' @param random TRUE or FALSE, if TRUE then the function will run lift-one with additional "nram" number of random approximate allocation, default to be FALSE
 #' @param nram when random == TRUE, the function will run lift-one nram number of initial proportion p00, default is 3
-#' @param logscale TRUE or FALSE, if TRUE then the EW ForLion will run lift-one with logscale, which is EW_liftoneDoptimal_log_GLM_func(); if FALSE then ForLion will run EW lift-one without logscale, which is EW_liftoneDoptimal_GLM_func()
+#' @param logscale TRUE or FALSE, whether or not to run the lift-one step in log-scale, i.e., using EW_liftoneDoptimal_log_GLM_func() or EW_liftoneDoptimal_GLM_func()
 #' @param rowmax maximum number of points in the initial design, default NULL indicates no restriction
-#' @param Xini initial list of design points, default NULL will generate random initial design points
+#' @param Xini initial list of design points, default NULL indicating automatically generating an initial list of design points.
 #'
 #' @return m             number of design points
 #' @return x.factor      matrix with rows indicating design point
@@ -38,32 +38,32 @@
 #' @export
 #'
 #' @examples
+#' #Example  Crystallography Experiment
 #' hfunc.temp = function(y) {c(y,1)}   # y -> h(y)=(y1,1)
 #' n.factor.temp = c(0)  # 1 continuous factors
 #' factor.level.temp = list(c(-1,1))
 #' link.temp="logit"
-#' paras_lowerbound<-c(0,1)
-#' paras_upperbound<-c(1,-1)
+#' paras_lowerbound<-c(4,-3)
+#' paras_upperbound<-c(10,3)
 #'  gjoint_b<- function(x) {
 #'  Func_b<-1/(prod(paras_upperbound-paras_lowerbound))
 #'  ##the prior distributions are follow uniform distribution
 #' return(Func_b)
 #' }
-#' set.seed(123)
 #' EW_ForLion_GLM_Optimal(n.factor=n.factor.temp, factor.level=factor.level.temp,
 #' hfunc=hfunc.temp,Integral_based=TRUE,joint_Func_b=gjoint_b, Lowerbounds=paras_lowerbound,
-#' Upperbounds=paras_upperbound, link=link.temp, reltol=1e-6, rel.diff=0.01,
-#' optim_grad=FALSE, maxit=500, random=FALSE, nram=3, logscale=FALSE,Xini=NULL)
+#' Upperbounds=paras_upperbound, link=link.temp, reltol=1e-4, delta=0.01,
+#' maxit=500, random=FALSE, nram=3, logscale=FALSE,Xini=NULL)
 
-EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
+EW_ForLion_GLM_Optimal<- function(n.factor, factor.level,var_names=NULL, hfunc,Integral_based,
           b_matrix, joint_Func_b,Lowerbounds, Upperbounds, xlist_fix=NULL, link,
-          reltol=1e-5,rel.diff=0,optim_grad=TRUE, maxit=100, random=FALSE, nram=3,
+          reltol=1e-5,delta=0, maxit=100, random=FALSE, nram=3,
           logscale=FALSE, rowmax=NULL, Xini=NULL) {
   d.factor=length(n.factor);             # number of factors
   if(Integral_based==TRUE){
   p.factor=length(Lowerbounds);                 # number of predictors
   k.continuous=sum(n.factor==0);         # number of continuous factors
-  if(rel.diff==0) rel.diff=reltol;
+  if(delta==0) delta=reltol;
   # functions for nu(eta), nu'(eta), nu''(eta) given eta
   nutemp=nu_logit_self; nu1temp=nu1_logit_self; nu2temp=nu2_logit_self;
   if(link=="probit") {nutemp=nu_probit_self; nu1temp=nu1_probit_self; nu2temp=nu2_probit_self;};
@@ -99,7 +99,7 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
   if(k.continuous==d.factor) {
     lvec=uvec=rep(0, d.factor);     # lower bounds and upper bounds for continuous factors
     for(i in 1:d.factor) {lvec[i]=min(factor.level[[i]]); uvec[i]=max(factor.level[[i]]);};
-    if(is.null(Xini)) {initial.temp=EW_design_initial_GLM(k.continuous=k.continuous, factor.level=factor.level,Integral_based=TRUE,joint_Func_b=joint_Func_b,Lowerbounds=Lowerbounds, Upperbounds=Upperbounds, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, link=link, h.func=hfunc, delta=reltol, epsilon = reltol, maxit=maxit); xtemp=initial.temp$X} else {xtemp=Xini}  #no initial design
+    if(is.null(Xini)) {initial.temp=EW_design_initial_GLM(k.continuous=k.continuous, factor.level=factor.level,Integral_based=TRUE,joint_Func_b=joint_Func_b,Lowerbounds=Lowerbounds, Upperbounds=Upperbounds, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, link=link, h.func=hfunc, delta0=reltol, epsilon = reltol, maxit=maxit); xtemp=initial.temp$X} else {xtemp=Xini}  #no initial design
     if(k.continuous==1) m.design=length(xtemp) else m.design=nrow(xtemp);                   # initial number of design points
     X.mat = matrix(0, m.design, p.factor);  # initial model matrix X
     E_w.vec = rep(0, m.design);     # E_w vector
@@ -151,14 +151,12 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
       return(Ew_d_dx)
     };
     x0=(lvec+uvec)/2;
-    if(optim_grad==TRUE){ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ,method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
-    if(optim_grad==FALSE){ytemp=stats::optim(par=x0, fn=Qy, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
+    ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ,method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));
 
     if(random) for(ia in 1:nram) { #random initial point, repeat (i), find potential better ytemp
       x0r=x0;
       for(i in 1:d.factor) x0r[i]=lvec[i]+stats::rbeta(1, 0.5, 0.5)*(uvec[i]-lvec[i]);
-      if(optim_grad==TRUE){ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
-      if(optim_grad==FALSE){ytemp1=stats::optim(par=x0r, fn=Qy, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
+      ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));
 
       if(ytemp1$value < ytemp$value) { x0=x0r; ytemp=ytemp1; };
     };
@@ -195,7 +193,7 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
       dtemp=as.matrix(stats::dist(x.design));
       diag(dtemp)=Inf;
       atemp=min(dtemp)
-      while((atemp<rel.diff)){ # merge closest two neighbors
+      while((atemp<delta)){ # merge closest two neighbors
         #before merging two closest points, save the current state of the design
         x.design_old=x.design
         p.design_old=p.design
@@ -290,14 +288,12 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
       };
 
       x0=(lvec+uvec)/2;
-      if(optim_grad==TRUE){ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
-      if(optim_grad==FALSE){ytemp=stats::optim(par=x0, fn=Qy, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
+      ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));
 
       if(random) for(ia in 1:nram) {
         x0r=x0;
         for(i in 1:d.factor) x0r[i]=lvec[i]+stats::rbeta(1, 0.5, 0.5)*(uvec[i]-lvec[i]);
-        if(optim_grad==TRUE){ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
-        if(optim_grad==FALSE){ytemp1=stats::optim(par=x0r, fn=Qy, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
+        ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));
 
         if(ytemp1$value < ytemp$value) { x0=x0r; ytemp=ytemp1; };
       };
@@ -311,7 +307,7 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
   if((k.continuous>0)&&(k.continuous<d.factor)) {
     lvec=uvec=rep(0, k.continuous);     # lower bounds and upper founds for continuous factors
     for(i in 1:k.continuous) {lvec[i]=min(factor.level[[i]]); uvec[i]=max(factor.level[[i]]);};
-    if(is.null(Xini)) {initial.temp=EW_design_initial_GLM(k.continuous=k.continuous, factor.level=factor.level,Integral_based=TRUE,joint_Func_b=joint_Func_b,Lowerbounds=Lowerbounds, Upperbounds=Upperbounds, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, link=link, h.func=hfunc, delta=reltol, epsilon = reltol, maxit=maxit); xtemp=initial.temp$X} else {xtemp=Xini}  #no initial design
+    if(is.null(Xini)) {initial.temp=EW_design_initial_GLM(k.continuous=k.continuous, factor.level=factor.level,Integral_based=TRUE,joint_Func_b=joint_Func_b,Lowerbounds=Lowerbounds, Upperbounds=Upperbounds, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, link=link, h.func=hfunc, delta0=reltol, epsilon = reltol, maxit=maxit); xtemp=initial.temp$X} else {xtemp=Xini}  #no initial design
     m.design=nrow(xtemp);                   # initial number of design points
     X.mat = matrix(0, m.design, p.factor);  # initial model matrix X
     E_w.vec = rep(0, m.design);     # E_w vector
@@ -331,8 +327,7 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
     E_w.vec = E_w.vec[optemp$p>0];    # updated E_w vector
     Dmat = t(X.mat * (p.design*E_w.vec)) %*% X.mat;    # X^T E_w X
     Amat = svd_inverse(Dmat);           # (X^T E_w X)^{-1}
-    if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}
-    else{xdiscrete=xlist_fix;}
+    if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}else{xdiscrete=xlist_fix;}
     ndiscrete=dim(xdiscrete)[1];
     for(idiscrete in 1:ndiscrete) {
       hfunc1 <- function(y) { hfunc(c(y, xdiscrete[idiscrete,])); };
@@ -364,23 +359,23 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
         return(Ew_d_dx)
       };
       x0=(lvec+uvec)/2;
-      if(optim_grad==TRUE){ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ,method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
-      if(optim_grad==FALSE){ytemp=stats::optim(par=x0, fn=Qy, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
-
+      ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ,method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));
+      ytempstar=ytemp;
       if(random) for(ia in 1:nram) {
         x0r=x0;
         for(i in 1:k.continuous) x0r[i]=lvec[i]+stats::rbeta(1, 0.5, 0.5)*(uvec[i]-lvec[i]);
-        if(optim_grad==TRUE){ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
-        if(optim_grad==FALSE){ytemp1=stats::optim(par=x0r, fn=Qy, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
+        ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));
 
         if(ytemp1$value < ytemp$value) { x0=x0r; ytemp=ytemp1; };
       };
       if(idiscrete==1) {
         ystar=c(ytemp$par, xdiscrete[idiscrete,]);
         fvalue=ytemp$value;
+        ytempstar=ytemp;
       } else if(ytemp$value<fvalue) {
         ystar=c(ytemp$par, xdiscrete[idiscrete,]);
         fvalue=ytemp$value;
+        ytempstar=ytemp;
       };
     };                            # end of "idiscrete" loop
     nit=1;                        # number of candidate y searched
@@ -413,7 +408,7 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
       dtemp=as.matrix(stats::dist(x.design));
       diag(dtemp)=Inf;
       atemp=min(dtemp)
-      while((atemp<rel.diff)){ # merge closest two neighbors
+      while((atemp<delta)){ # merge closest two neighbors
         #before merging two closest points, save the current state of the design
         x.design_old=x.design
         p.design_old=p.design
@@ -503,30 +498,30 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
           return(Ew_d_dx)
         };
         x0=(lvec+uvec)/2;
-        if(optim_grad==TRUE){ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ,method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
-        if(optim_grad==FALSE){ytemp=stats::optim(par=x0, fn=Qy, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
+        ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ,method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));
 
         if(random) for(ia in 1:nram) {
           x0r=x0;
           for(i in 1:k.continuous) x0r[i]=lvec[i]+stats::rbeta(1, 0.5, 0.5)*(uvec[i]-lvec[i]);
-          if(optim_grad==TRUE){ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
-          if(optim_grad==FALSE){ytemp1=stats::optim(par=x0r, fn=Qy, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
+          ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));
 
           if(ytemp1$value < ytemp$value) { x0=x0r; ytemp=ytemp1; };
         };
         if(idiscrete==1) {
           ystar=c(ytemp$par, xdiscrete[idiscrete,]);
           fvalue=ytemp$value;
+          ytempstar=ytemp;
         } else if(ytemp$value<fvalue) {
           ystar=c(ytemp$par, xdiscrete[idiscrete,]);
           fvalue=ytemp$value;
+          ytempstar=ytemp;
         };
       };                            # end of "idiscrete" loop
       nit=nit+1;                    # number of candidate y searched
     };     # End of "while" loop
     itmax.design=nit;
-    converge.design=(ytemp$convergence==0);  # TRUE or FALSE
-    if(-ytemp$value/p.factor-1 > reltol) converge.design=FALSE;
+    converge.design=(ytempstar$convergence==0);  # TRUE or FALSE
+    if(-ytempstar$value/p.factor-1 > reltol) converge.design=FALSE;
   };                                # end of Case III
   rownames(x.design)=NULL;
   rownames(X.mat)=NULL;
@@ -543,7 +538,7 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
   }else{
     p.factor=dim(b_matrix)[2];                 # number of predictors
     k.continuous=sum(n.factor==0);         # number of continuous factors
-    if(rel.diff==0) rel.diff=reltol;
+    if(delta==0) delta=reltol;
     # functions for nu(eta), nu'(eta), nu''(eta) given eta
     nutemp=nu_logit_self; nu1temp=nu1_logit_self; nu2temp=nu2_logit_self;
     if(link=="probit") {nutemp=nu_probit_self; nu1temp=nu1_probit_self; nu2temp=nu2_probit_self;};
@@ -579,7 +574,7 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
     if(k.continuous==d.factor) {
       lvec=uvec=rep(0, d.factor);     # lower bounds and upper bounds for continuous factors
       for(i in 1:d.factor) {lvec[i]=min(factor.level[[i]]); uvec[i]=max(factor.level[[i]]);};
-      if(is.null(Xini)) {initial.temp=EW_design_initial_GLM(k.continuous=k.continuous, factor.level=factor.level,Integral_based=Integral_based,b_matrix=b_matrix, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, link=link, h.func=hfunc, delta=reltol, epsilon = reltol, maxit=maxit); xtemp=initial.temp$X} else {xtemp=Xini}  #no initial design
+      if(is.null(Xini)) {initial.temp=EW_design_initial_GLM(k.continuous=k.continuous, factor.level=factor.level,Integral_based=Integral_based,b_matrix=b_matrix, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, link=link, h.func=hfunc, delta0=reltol, epsilon = reltol, maxit=maxit); xtemp=initial.temp$X} else {xtemp=Xini}  #no initial design
       if(k.continuous==1) m.design=length(xtemp) else m.design=nrow(xtemp);                   # initial number of design points
       X.mat = matrix(0, m.design, p.factor);  # initial model matrix X
       E_w.vec = rep(0, m.design);     # E_w vector
@@ -634,14 +629,12 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
         return(Ew_d_dx)
       };
       x0=(lvec+uvec)/2;
-      if(optim_grad==TRUE){ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ,method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
-      if(optim_grad==FALSE){ytemp=stats::optim(par=x0, fn=Qy, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
+      ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ,method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));
 
       if(random) for(ia in 1:nram) { #random initial point, repeat (i), find potential better ytemp
         x0r=x0;
         for(i in 1:d.factor) x0r[i]=lvec[i]+stats::rbeta(1, 0.5, 0.5)*(uvec[i]-lvec[i]);
-        if(optim_grad==TRUE){ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
-        if(optim_grad==FALSE){ytemp1=stats::optim(par=x0r, fn=Qy, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
+        ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));
 
         if(ytemp1$value < ytemp$value) { x0=x0r; ytemp=ytemp1; };
       };
@@ -679,7 +672,7 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
         dtemp=as.matrix(stats::dist(x.design));
         diag(dtemp)=Inf;
         atemp=min(dtemp)
-        while((atemp<rel.diff)){ # merge closest two neighbors
+        while((atemp<delta)){ # merge closest two neighbors
           #before merging two closest points, save the current state of the design
           x.design_old=x.design
           p.design_old=p.design
@@ -778,14 +771,12 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
           return(Ew_d_dx)
         };
         x0=(lvec+uvec)/2;
-        if(optim_grad==TRUE){ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
-        if(optim_grad==FALSE){ytemp=stats::optim(par=x0, fn=Qy, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
+        ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));
 
         if(random) for(ia in 1:nram) {
           x0r=x0;
           for(i in 1:d.factor) x0r[i]=lvec[i]+stats::rbeta(1, 0.5, 0.5)*(uvec[i]-lvec[i]);
-          if(optim_grad==TRUE){ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
-          if(optim_grad==FALSE){ytemp1=stats::optim(par=x0r, fn=Qy, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
+          ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));
 
           if(ytemp1$value < ytemp$value) { x0=x0r; ytemp=ytemp1; };
         };
@@ -799,7 +790,7 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
     if((k.continuous>0)&&(k.continuous<d.factor)) {
       lvec=uvec=rep(0, k.continuous);     # lower bounds and upper founds for continuous factors
       for(i in 1:k.continuous) {lvec[i]=min(factor.level[[i]]); uvec[i]=max(factor.level[[i]]);};
-      if(is.null(Xini)) {initial.temp=EW_design_initial_GLM(k.continuous=k.continuous, factor.level=factor.level,Integral_based=Integral_based,b_matrix=b_matrix, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, link=link, h.func=hfunc, delta=reltol, epsilon = reltol, maxit=maxit); xtemp=initial.temp$X} else {xtemp=Xini}  #no initial design
+      if(is.null(Xini)) {initial.temp=EW_design_initial_GLM(k.continuous=k.continuous, factor.level=factor.level,Integral_based=Integral_based,b_matrix=b_matrix, xlist_fix=xlist_fix, lvec=lvec, uvec=uvec, link=link, h.func=hfunc, delta0=reltol, epsilon = reltol, maxit=maxit); xtemp=initial.temp$X} else {xtemp=Xini}  #no initial design
       m.design=nrow(xtemp);                   # initial number of design points
       X.mat = matrix(0, m.design, p.factor);  # initial model matrix X
       E_w.vec = rep(0, m.design);     # E_w vector
@@ -819,8 +810,7 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
       E_w.vec = E_w.vec[optemp$p>0];    # updated E_w vector
       Dmat = t(X.mat * (p.design*E_w.vec)) %*% X.mat;    # X^T E_w X
       Amat = svd_inverse(Dmat);           # (X^T E_w X)^{-1}
-      if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}
-      else{xdiscrete=xlist_fix;}
+      if(is.null(xlist_fix)){xdiscrete=xmat_discrete_self(factor.level[(k.continuous+1):d.factor]);}else{xdiscrete=xlist_fix;}
       ndiscrete=dim(xdiscrete)[1];
       for(idiscrete in 1:ndiscrete) {
         hfunc1 <- function(y) { hfunc(c(y, xdiscrete[idiscrete,])); };
@@ -857,23 +847,23 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
           return(Ew_d_dx)
         };
         x0=(lvec+uvec)/2;
-        if(optim_grad==TRUE){ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ,method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
-        if(optim_grad==FALSE){ytemp=stats::optim(par=x0, fn=Qy, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
-
+        ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ,method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));
+        ytempstar=ytemp;
         if(random) for(ia in 1:nram) {
           x0r=x0;
           for(i in 1:k.continuous) x0r[i]=lvec[i]+stats::rbeta(1, 0.5, 0.5)*(uvec[i]-lvec[i]);
-          if(optim_grad==TRUE){ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
-          if(optim_grad==FALSE){ytemp1=stats::optim(par=x0r, fn=Qy, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
+          ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));
 
           if(ytemp1$value < ytemp$value) { x0=x0r; ytemp=ytemp1; };
         };
         if(idiscrete==1) {
           ystar=c(ytemp$par, xdiscrete[idiscrete,]);
           fvalue=ytemp$value;
+          ytempstar=ytemp;
         } else if(ytemp$value<fvalue) {
           ystar=c(ytemp$par, xdiscrete[idiscrete,]);
           fvalue=ytemp$value;
+          ytempstar=ytemp;
         };
       };                            # end of "idiscrete" loop
       nit=1;                        # number of candidate y searched
@@ -907,7 +897,7 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
         dtemp=as.matrix(stats::dist(x.design));
         diag(dtemp)=Inf;
         atemp=min(dtemp)
-        while((atemp<rel.diff)){ # merge closest two neighbors
+        while((atemp<delta)){ # merge closest two neighbors
           #before merging two closest points, save the current state of the design
           x.design_old=x.design
           p.design_old=p.design
@@ -1004,30 +994,30 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
           };
 
           x0=(lvec+uvec)/2;
-          if(optim_grad==TRUE){ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ,method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
-          if(optim_grad==FALSE){ytemp=stats::optim(par=x0, fn=Qy, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
+          ytemp=stats::optim(par=x0, fn=Qy, gr=gradQ,method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));
 
           if(random) for(ia in 1:nram) {
             x0r=x0;
             for(i in 1:k.continuous) x0r[i]=lvec[i]+stats::rbeta(1, 0.5, 0.5)*(uvec[i]-lvec[i]);
-            if(optim_grad==TRUE){ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
-            if(optim_grad==FALSE){ytemp1=stats::optim(par=x0r, fn=Qy, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));}
+            ytemp1=stats::optim(par=x0r, fn=Qy, gr=gradQ, method="L-BFGS-B", lower=lvec, upper=uvec, control=list(maxit=maxit, factr=reltol*1e13));
 
             if(ytemp1$value < ytemp$value) { x0=x0r; ytemp=ytemp1; };
           };
           if(idiscrete==1) {
             ystar=c(ytemp$par, xdiscrete[idiscrete,]);
             fvalue=ytemp$value;
+            ytempstar=ytemp;
           } else if(ytemp$value<fvalue) {
             ystar=c(ytemp$par, xdiscrete[idiscrete,]);
             fvalue=ytemp$value;
+            ytempstar=ytemp;
           };
         };                            # end of "idiscrete" loop
         nit=nit+1;                    # number of candidate y searched
       };     # End of "while" loop
       itmax.design=nit;
-      converge.design=(ytemp$convergence==0);  # TRUE or FALSE
-      if(-ytemp$value/p.factor-1 > reltol) converge.design=FALSE;
+      converge.design=(ytempstar$convergence==0);  # TRUE or FALSE
+      if(-ytempstar$value/p.factor-1 > reltol) converge.design=FALSE;
     };                                # end of Case III
     rownames(x.design)=NULL;
     rownames(X.mat)=NULL;
@@ -1041,7 +1031,7 @@ EW_ForLion_GLM_Optimal<- function(n.factor, factor.level, hfunc,Integral_based,
     };
   }
   #define S3 class
-  output<-list(m=m.design, x.factor=x.design, p=p.design, det=det.design, convergence=converge.design, min.diff=min.diff, x.close=x.close, itmax=itmax.design);
+  output<-list(m=m.design, x.factor=x.design, p=p.design,var.names=var_names, det=det.design, convergence=converge.design, min.diff=min.diff, x.close=x.close, itmax=itmax.design);
   class(output) <- "design_output"
   return(output)
 }

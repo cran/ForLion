@@ -8,16 +8,17 @@ EW_ForLion_MLM_Optimal(
   J,
   n.factor,
   factor.level,
+  var_names = NULL,
   xlist_fix = NULL,
   hfunc,
   h.prime,
   bvec_matrix,
   link = "continuation",
   EW_Fi.func = EW_Fi_MLM_func,
-  delta = 1e-05,
+  delta0 = 1e-05,
   epsilon = 1e-12,
   reltol = 1e-05,
-  rel.diff = 0,
+  delta = 0,
   maxit = 100,
   random = FALSE,
   nram = 3,
@@ -31,45 +32,47 @@ EW_ForLion_MLM_Optimal(
 \arguments{
 \item{J}{number of response levels in the multinomial logit model}
 
-\item{n.factor}{vector of numbers of distinct levels, "0" indicates continuous factors, "0"s always come first, "2" or above indicates discrete factor, "1" is not allowed}
+\item{n.factor}{Vector of numbers of distinct levels, “0” indicating continuous factors that always come first, “2” or more for discrete factors, and “1” not allowed.}
 
-\item{factor.level}{list of distinct levels, (min, max) for continuous factor, continuous factors first, should be the same order as n.factor}
+\item{factor.level}{list of distinct factor levels, “(min, max)” for continuous factors that always come first, finite sets for discrete factors.}
 
-\item{xlist_fix}{the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables}
+\item{var_names}{Names for the design factors. Must have the same length asfactor.level. Defaults to "X1", "X2", ...}
 
-\item{hfunc}{function for obtaining model matrix h(y) for given design point y, y has to follow the same order as n.factor}
+\item{xlist_fix}{list of discrete factor experimental settings under consideration, default NULL indicating a list of all possible discrete factor experimental settings will be used.}
+
+\item{hfunc}{function for generating the corresponding model matrix or predictor vector, given an experimental setting or design point.}
 
 \item{h.prime}{function to obtain dX/dx}
 
-\item{bvec_matrix}{the matrix of the sampled parameter values of beta}
+\item{bvec_matrix}{Matrix of bootstrapped or simulated parameter values.}
 
 \item{link}{link function, default "continuation", other choices "baseline", "cumulative", and "adjacent"}
 
-\item{EW_Fi.func}{function to calculate row-wise Expectation of Fisher information Fi, default is EW_Fi_MLM_func}
+\item{EW_Fi.func}{function to calculate entry wise expectation of Fisher information Fi, default EW_Fi_MLM_func.}
 
-\item{delta}{tuning parameter, the generated design pints distance threshold, || x_i(0) - x_j(0) || >= delta, default 1e-5}
+\item{delta0}{merging threshold for initial design, such that, || x_i(0) - x_j(0) || >= delta0, default 1e-5}
 
-\item{epsilon}{determining f.det > 0 numerically, f.det <= epsilon will be considered as f.det <= 0, default 1e-12}
+\item{epsilon}{tuning parameter as converging threshold, such that, a nonnegative number is regarded as numerical zero if less than epsilon, default 1e-12.}
 
 \item{reltol}{the relative convergence tolerance, default value 1e-5}
 
-\item{rel.diff}{points with distance less than that will be merged, default value 0}
+\item{delta}{relative difference as merging threshold for the merging step, the distance of two points less than delta may be merged, default 0, can be different from delta0 for the initial design.}
 
 \item{maxit}{the maximum number of iterations, default value 100}
 
-\item{random}{TRUE or FALSE, if TRUE then the function will run lift-one with additional "nram" number of random approximate allocation, default to be FALSE}
+\item{random}{TRUE or FALSE, whether or not to repeat the lift-one step multiple times with random initial allocations, default FALSE.}
 
-\item{nram}{when random == TRUE, the function will run lift-one nram number of initial proportion p00, default is 3}
+\item{nram}{number of times repeating the lift-one step with random initial allocations, valid only if random is TRUE, default 3.}
 
 \item{rowmax}{maximum number of points in the initial design, default NULL indicates no restriction}
 
-\item{Xini}{initial list of design points, default NULL will generate random initial design points}
+\item{Xini}{initial list of design points, default NULL indicating automatically generating an initial list of design points.}
 
-\item{random.initial}{TRUE or FALSE, if TRUE then the function will run EW ForLion with additional "nram.initial" number of random initial design points, default FALSE}
+\item{random.initial}{TRUE or FALSE, whether or not to repeat the whole procedure multiple times with random initial designs, default FALSE.}
 
-\item{nram.initial}{when random.initial == TRUE, the function will run EW ForLion algorithm with nram.initial number of initial design points Xini, default is 3}
+\item{nram.initial}{number of times repeating the whole procedure with random initial designs, valid only if random.initial is TRUE, default 3.}
 
-\item{optim_grad}{TRUE or FALSE, default is FALSE, whether to use the analytical gradient function or numerical gradient for searching optimal new design point}
+\item{optim_grad}{TRUE or FALSE, default is FALSE, whether to use the analytical gradient function or numerical gradient when searching for a new design point.}
 }
 \value{
 m           the number of design points
@@ -115,6 +118,6 @@ bvec_bootstrap<-matrix(c(-0.2401, -1.9292, -2.7851, -1.614,-1.162,
                          -9.2154, -9.7576, -9.6818, -8.5139, -8.56),nrow=4,byrow=TRUE)
 EW_ForLion_MLM_Optimal(J=J, n.factor=n.factor.temp, factor.level=factor.level.temp,
          xlist_fix=NULL, hfunc=hfunc.temp,h.prime=h.prime.temp, bvec_matrix=bvec_bootstrap,
-         rel.diff=1, link=link.temp, optim_grad=FALSE)
+         delta=1, link=link.temp, optim_grad=FALSE)
 
 }

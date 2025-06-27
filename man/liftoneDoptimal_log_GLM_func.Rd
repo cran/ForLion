@@ -23,9 +23,9 @@ liftoneDoptimal_log_GLM_func(
 
 \item{maxit}{The maximum number of iterations, default value 100}
 
-\item{random}{TRUE or FALSE, if TRUE then the function will run with additional "nram" number of initial allocation p00, default to be TRUE}
+\item{random}{TRUE or FALSE, if TRUE then the function will run lift-one with additional "nram" number of random approximate allocation, default to be FALSE}
 
-\item{nram}{When random == TRUE, the function will generate nram number of initial points, default is 3}
+\item{nram}{when random == TRUE, the function will run lift-one nram number of initial proportion p00, default is 3}
 
 \item{p00}{Specified initial design approximate allocation; default to be NULL, this will generate a random initial design}
 }

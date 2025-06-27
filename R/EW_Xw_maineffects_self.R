@@ -2,10 +2,10 @@
 #'
 #' @param x            x=(x1,...,xd) -- design point/experimental setting
 #' @param Integral_based TRUE or FALSE, if TRUE then we will find the integral-based EW D-optimality otherwise we will find the sample-based EW D-optimality
-#' @param b_matrix     The matrix of the sampled parameter values of beta
-#' @param joint_Func_b The prior joint probability distribution of the parameters
-#' @param Lowerbounds  The lower limit of the prior distribution for each parameter
-#' @param Upperbounds  The upper limit of the prior distribution for each parameter
+#' @param b_matrix     matrix of bootstrapped or simulated parameter values.
+#' @param joint_Func_b prior distribution function of model parameters
+#' @param Lowerbounds  vector of lower ends of ranges of prior distribution for model parameters.
+#' @param Upperbounds  vector of upper ends of ranges of prior distribution for model parameters.
 #' @param link         link = "logit"  -- link function, default: "logit", other links: "probit", "cloglog", "loglog", "cauchit", "log"
 #' @param h.func       function h(x)=(h1(x),...,hp(x)), default (1,x1,...,xd)
 #'

@@ -1,8 +1,7 @@
 Package: ForLion
 Type: Package
-Title: 'ForLion' Algorithms to Find Optimal Experimental Designs with
-        Mixed Factors
-Version: 0.2.0
+Title: 'ForLion' Algorithm to Find D-Optimal Designs for Experiments
+Version: 0.3.0
 Authors@R: c(person(given = "Yifei",
                       family = "Huang",
                       role = "aut"),
@@ -14,7 +13,7 @@ Authors@R: c(person(given = "Yifei",
                       family = "Yang",
                       role = "aut"))
 Maintainer: Siting Lin <slin95@uic.edu>
-Description: Designing experimental plans that involve both discrete and continuous factors with general parametric statistical models using the 'ForLion' algorithm and 'EW ForLion' algorithm. The algorithms will search for locally optimal designs and EW optimal designs under the D-criterion. Reference: Huang, Y., Li, K., Mandal, A., & Yang, J., (2024)<doi:10.1007/s11222-024-10465-x>. Lin, S., Huang, Y., & Yang, J. (2025) <doi:10.48550/arXiv.2505.00629>.
+Description: Designing experimental plans that involve both discrete and continuous factors with general parametric statistical models using the 'ForLion' algorithm and 'EW ForLion' algorithm. The algorithms will search for locally optimal designs and EW optimal designs under the D-criterion. Reference: Huang, Y., Li, K., Mandal, A., & Yang, J., (2024)<doi:10.1007/s11222-024-10465-x>. 
 License: MIT + file LICENSE
 Encoding: UTF-8
 Imports: psych, stats, cubature
@@ -23,9 +22,9 @@ Suggests: knitr, rmarkdown, testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 NeedsCompilation: no
-Packaged: 2025-06-10 15:34:33 UTC; sitin
+Packaged: 2025-06-27 20:32:31 UTC; sitin
 Author: Yifei Huang [aut],
   Siting Lin [aut, cre],
   Jie Yang [aut]
 Repository: CRAN
-Date/Publication: 2025-06-10 16:00:10 UTC
+Date/Publication: 2025-06-27 20:50:02 UTC

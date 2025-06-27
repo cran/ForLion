@@ -14,7 +14,7 @@ EW_design_initial_MLM(
   h.func,
   link = "continuation",
   EW_Fi.func = EW_Fi_MLM_func,
-  delta = 1e-06,
+  delta0 = 1e-06,
   epsilon = 1e-12,
   maxit = 1000
 )
@@ -22,9 +22,9 @@ EW_design_initial_MLM(
 \arguments{
 \item{k.continuous}{number of continuous variables}
 
-\item{factor.level}{lower, upper limit of continuous variables, and discrete levels of categorical variables, continuous factors come first}
+\item{factor.level}{list of distinct factor levels, “(min, max)” for continuous factors that always come first, finite sets for discrete factors.}
 
-\item{xlist_fix}{the restricted discrete settings to be chosen, default to NULL, if NULL, will generate a discrete uniform random variables}
+\item{xlist_fix}{list of discrete factor experimental settings under consideration, default NULL indicating a list of all possible discrete factor experimental settings will be used.}
 
 \item{lvec}{lower limit of continuous variables}
 
@@ -38,7 +38,7 @@ EW_design_initial_MLM(
 
 \item{EW_Fi.func}{function, is used to calculate the Expectation of Fisher information for a design point - default to be EW_Fi_MLM_func() in the package}
 
-\item{delta}{tuning parameter, the distance threshold, || x_i(0) - x_j(0) || >= delta}
+\item{delta0}{tuning parameter, the distance threshold, || x_i(0) - x_j(0) || >= delta0}
 
 \item{epsilon}{determining f.det > 0 numerically, f.det <= epsilon will be considered as f.det <= 0}
 

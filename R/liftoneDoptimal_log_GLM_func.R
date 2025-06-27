@@ -4,8 +4,8 @@
 #' @param w Diagonal of W matrix in Fisher information matrix, can be calculated Xw_maineffects_self() function in the ForLion package
 #' @param reltol The relative convergence tolerance, default value 1e-5
 #' @param maxit The maximum number of iterations, default value 100
-#' @param random TRUE or FALSE, if TRUE then the function will run with additional "nram" number of initial allocation p00, default to be TRUE
-#' @param nram When random == TRUE, the function will generate nram number of initial points, default is 3
+#' @param random TRUE or FALSE, if TRUE then the function will run lift-one with additional "nram" number of random approximate allocation, default to be FALSE
+#' @param nram when random == TRUE, the function will run lift-one nram number of initial proportion p00, default is 3
 #' @param p00 Specified initial design approximate allocation; default to be NULL, this will generate a random initial design
 #'
 #' @return p               D-optimal approximate allocation
